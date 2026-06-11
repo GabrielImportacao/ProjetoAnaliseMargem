@@ -1,0 +1,72 @@
+package Modelo;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class DadosItem {
+    private final String codigo;
+    private final String descricao;
+    private final BigDecimal custoAtual;
+    private final BigDecimal custoPromob;
+    private final BigDecimal custoAnterior;
+    private final String registroCustoAtual;
+    private final String registroCustoPromob;
+    private final String registroCustoAnterior;
+    private final LocalDate dataCustoAtual;
+
+    public DadosItem(String codigo,
+                     String descricao,
+                     BigDecimal custoAtual,
+                     BigDecimal custoPromob,
+                     BigDecimal custoAnterior,
+                     String registroCustoAtual,
+                     String registroCustoPromob,
+                     String registroCustoAnterior,
+                     LocalDate dataCustoAtual) {
+        this.codigo = codigo;
+        this.descricao = descricao;
+        this.custoAtual = custoAtual;
+        this.custoPromob = custoPromob;
+        this.custoAnterior = custoAnterior;
+        this.registroCustoAtual = registroCustoAtual;
+        this.registroCustoPromob = registroCustoPromob;
+        this.registroCustoAnterior = registroCustoAnterior;
+        this.dataCustoAtual = dataCustoAtual;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public BigDecimal getCustoAtual() {
+        return custoAtual;
+    }
+
+    public BigDecimal getCustoPromob() {
+        return custoPromob;
+    }
+
+    public BigDecimal getCustoAnterior() {
+        return custoAnterior;
+    }
+
+    public String getRegistroCustoAtual() {
+        return registroCustoAtual;
+    }
+
+    public String getRegistroCustoPromob() {
+        return registroCustoPromob;
+    }
+
+    public String getRegistroCustoAnterior() {
+        return registroCustoAnterior;
+    }
+
+    public LocalDate getDataCustoAtual() {
+        return dataCustoAtual;
+    }
+}

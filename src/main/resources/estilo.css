@@ -1,0 +1,178 @@
+.root-app {
+    -fx-background-color: #c9c5ba;
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+}
+
+.topo {
+    -fx-background-color: #c9c5ba;
+}
+
+.cabecalho {
+    -fx-background-color: #c8c8c8;
+}
+
+.logo-icone {
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1c2f46;
+    -fx-padding: 0;
+}
+
+.logo-texto {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1c2f46;
+}
+
+.titulo-principal {
+    -fx-font-size: 25px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #111111;
+}
+
+.botao-config {
+    -fx-background-color: transparent;
+    -fx-font-size: 22px;
+    -fx-text-fill: #555555;
+    -fx-cursor: hand;
+}
+
+.area-comandos {
+    -fx-background-color: #c9c5ba;
+}
+
+.botao-acao, .botao-busca {
+    -fx-background-color: #eeeeee;
+    -fx-border-color: #555555;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+    -fx-cursor: hand;
+}
+
+.botao-acao:hover, .botao-busca:hover {
+    -fx-background-color: #ffffff;
+}
+
+.box-pequeno {
+    -fx-border-color: #555555;
+    -fx-background-color: #e1e1e1;
+    -fx-alignment: center;
+    -fx-padding: 2 8 5 8;
+    -fx-min-width: 95px;
+}
+
+.box-titulo {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #555555;
+}
+
+.box-valor {
+    -fx-font-size: 12px;
+    -fx-text-fill: #555555;
+    -fx-alignment: center;
+}
+
+.resumo-superior {
+    -fx-border-color: #555555;
+    -fx-background-color: #d7d7d7;
+}
+
+.resumo-cabecalho {
+    -fx-border-color: #555555;
+    -fx-background-color: #c9c9c9;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 5 2 5;
+    -fx-text-fill: #444444;
+}
+
+.resumo-celula {
+    -fx-border-color: #555555;
+    -fx-background-color: #e2e2e2;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 5 2 5;
+    -fx-text-fill: #555555;
+}
+
+.tabela-analise {
+    -fx-background-color: #c9c5ba;
+    -fx-table-cell-border-color: #595959;
+}
+
+.tabela-analise .column-header-background {
+    -fx-background-color: #4a4a4a;
+}
+
+.tabela-analise .column-header,
+.tabela-analise .filler {
+    -fx-background-color: #4a4a4a;
+    -fx-border-color: #606060;
+}
+
+.tabela-analise .column-header .label {
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.tabela-analise .table-row-cell:odd {
+    -fx-background-color: #eeeeee;
+}
+
+.tabela-analise .table-row-cell:even {
+    -fx-background-color: #dcdcdc;
+}
+
+.tabela-analise .table-row-cell:selected {
+    -fx-background-color: #b9d7ff;
+}
+
+.tabela-analise .table-cell {
+    -fx-border-color: transparent #595959 transparent transparent;
+    -fx-padding: 4 6 4 6;
+    -fx-text-fill: #111111;
+}
+
+.grupo-vermelho .column-header,
+.coluna-vermelha .column-header {
+    -fx-background-color: #f51f1f;
+}
+
+.grupo-laranja .column-header,
+.coluna-laranja .column-header {
+    -fx-background-color: #f5aa00;
+}
+
+.grupo-azul .column-header,
+.coluna-azul .column-header {
+    -fx-background-color: #1266aa;
+}
+
+.margem-baixa {
+    -fx-text-fill: #d80000;
+    -fx-font-weight: bold;
+}
+
+.margem-media {
+    -fx-text-fill: #b36b00;
+    -fx-font-weight: bold;
+}
+
+.margem-boa {
+    -fx-text-fill: #006b2d;
+    -fx-font-weight: bold;
+}
+
+.rodape {
+    -fx-background-color: #c9c5ba;
+    -fx-border-color: #777777 transparent transparent transparent;
+}
+
+.texto-rodape {
+    -fx-text-fill: #333333;
+}
