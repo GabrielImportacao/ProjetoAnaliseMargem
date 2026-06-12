@@ -19,6 +19,43 @@
     -fx-padding: 0;
 }
 
+.botao-opcoes-item {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.botao-opcoes-item:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.08);
+}
+
+.campo-codigo-tabela {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0 0 0 4;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #000000;
+}
+
+.campo-codigo-tabela:focused {
+    -fx-background-color: white;
+    -fx-border-color: #777777;
+    -fx-border-width: 1;
+}
+
+.botao-opcoes-item {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0 4 0 2;
+    -fx-cursor: hand;
+}
+
+.botao-opcoes-item:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.08);
+}
+
 .logo-texto {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
@@ -42,18 +79,88 @@
     -fx-background-color: #c9c5ba;
 }
 
-.botao-acao, .botao-busca {
-    -fx-background-color: #eeeeee;
-    -fx-border-color: #555555;
-    -fx-border-radius: 4;
+.botao-acao,
+.botao-busca {
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
     -fx-background-radius: 4;
+
+    -fx-border-color: #666666;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-border-insets: 0;
+
+    -fx-padding: 3 8 3 6;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-text-fill: #333333;
+    -fx-text-fill: #1c1c1c;
+
+    -fx-alignment: center;
+    -fx-content-display: left;
+    -fx-graphic-text-gap: 4;
     -fx-cursor: hand;
 }
 
-.botao-acao:hover, .botao-busca:hover {
+.botao-acao:hover,
+.botao-busca:hover {
+    -fx-background-color: #f2f2f2;
+}
+
+.campo-codigo-tabela {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0 0 0 6;
+
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #000000;
+}
+
+.campo-codigo-tabela:focused {
     -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
+    -fx-border-color: #777777;
+    -fx-border-width: 1;
+}
+
+.botao-opcoes-item {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0 4 0 2;
+    -fx-cursor: hand;
+}
+
+.botao-opcoes-item:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.08);
+}
+
+.combo-estado-mini {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-font-size: 14px;
+}
+
+.combo-estado-mini .list-cell {
+    -fx-background-color: transparent;
+    -fx-alignment: center;
+    -fx-padding: 0;
+    -fx-text-fill: #555555;
+}
+
+.combo-estado-mini .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 2 0 0;
+}
+
+.combo-estado-mini .arrow {
+    -fx-background-color: #555555;
 }
 
 .box-pequeno {

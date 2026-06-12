@@ -25,10 +25,12 @@ public class ItemAnalise {
 
     private final ObjectProperty<BigDecimal> margemPromob = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final StringProperty registroCustoPromob = new SimpleStringProperty("");
-
+    private final ObjectProperty<LocalDate> dataCustoPromob = new SimpleObjectProperty<>();
+    
     private final ObjectProperty<BigDecimal> variacaoAnterior = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> margemAnterior = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final StringProperty registroCustoAnterior = new SimpleStringProperty("");
+    private final ObjectProperty<LocalDate> dataCustoAnterior = new SimpleObjectProperty<>();
 
     private final ObjectProperty<BigDecimal> custoAtual = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> custoPromob = new SimpleObjectProperty<>(BigDecimal.ZERO);
@@ -128,6 +130,30 @@ public class ItemAnalise {
 
     public ObjectProperty<LocalDate> dataCustoAtualProperty() {
         return dataCustoAtual;
+    }
+    
+    public LocalDate getDataCustoPromob() {
+        return dataCustoPromob.get();
+    }
+
+    public void setDataCustoPromob(LocalDate dataCustoPromob) {
+        this.dataCustoPromob.set(dataCustoPromob);
+    }
+
+    public ObjectProperty<LocalDate> dataCustoPromobProperty() {
+        return dataCustoPromob;
+    }
+
+    public LocalDate getDataCustoAnterior() {
+        return dataCustoAnterior.get();
+    }
+
+    public void setDataCustoAnterior(LocalDate dataCustoAnterior) {
+        this.dataCustoAnterior.set(dataCustoAnterior);
+    }
+
+    public ObjectProperty<LocalDate> dataCustoAnteriorProperty() {
+        return dataCustoAnterior;
     }
 
     public String getRegistroCustoAtual() {
@@ -236,6 +262,8 @@ public class ItemAnalise {
             setRegistroCustoPromob("");
             setRegistroCustoAnterior("");
             setDataCustoAtual(null);
+            setDataCustoPromob(null);
+            setDataCustoAnterior(null);
             return;
         }
 
@@ -247,5 +275,7 @@ public class ItemAnalise {
         setRegistroCustoPromob(dados.getRegistroCustoPromob());
         setRegistroCustoAnterior(dados.getRegistroCustoAnterior());
         setDataCustoAtual(dados.getDataCustoAtual());
+        setDataCustoPromob(dados.getDataCustoAtual());
+        setDataCustoAnterior(dados.getDataCustoAtual());
     }
 }

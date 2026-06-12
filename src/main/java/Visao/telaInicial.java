@@ -14,6 +14,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
@@ -37,6 +38,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
 
+import Visao.componentes.MiniTabelaEstadoBase;
+import Visao.componentes.TabelaResumo;
+
 public class telaInicial extends Application {
     private final ItemService itemService = new ItemService();
     private final AnaliseService analiseService = new AnaliseService();
@@ -48,7 +52,8 @@ public class telaInicial extends Application {
     private final Label resultadoAnteriorLabel = new Label("R$ 0,00");
     private final ComboBox<EstadoInfo> estadoCombo = new ComboBox<>();
     private final Label baseEstadoLabel = new Label("0,00%");
-
+    
+    
     private TableView<ItemAnalise> tabela;
     
     
@@ -109,6 +114,21 @@ public class telaInicial extends Application {
         recalcularResumo();
     }
 
+    private ImageView carregarIcone(String nomeArquivo, double largura, double altura) {
+        ImageView icone = new ImageView(
+                new javafx.scene.image.Image(
+                        getClass().getResourceAsStream("/icons/" + nomeArquivo)
+                )
+        );
+
+        icone.setFitWidth(largura);
+        icone.setFitHeight(altura);
+        icone.setPreserveRatio(true);
+        icone.setSmooth(true);
+
+        return icone;
+    }
+    
     private VBox criarTopo() {
         VBox topo = new VBox();
         topo.getStyleClass().add("topo");
@@ -119,8 +139,7 @@ public class telaInicial extends Application {
         cabecalho.setPadding(new Insets(12, 14, 10, 14));
 
         VBox logoBox = new VBox(0);
-        Label logoIcone = new Label("◒");
-        logoIcone.getStyleClass().add("logo-icone");
+        ImageView logoIcone = carregarIcone("logo.png", 38, 28);
         Label logoTexto = new Label("PLASNOX");
         logoTexto.getStyleClass().add("logo-texto");
         logoBox.getChildren().addAll(logoIcone, logoTexto);
@@ -133,7 +152,8 @@ public class telaInicial extends Application {
         titulo.setMaxWidth(Double.MAX_VALUE);
         titulo.setAlignment(Pos.CENTER);
 
-        Button configButton = new Button("⚙");
+        Button configButton = new Button();
+        configButton.setGraphic(carregarIcone("config.png", 18, 18));
         configButton.getStyleClass().add("botao-config");
         configButton.setTooltip(new Tooltip("Configurações"));
 
@@ -143,138 +163,42 @@ public class telaInicial extends Application {
         comandos.getStyleClass().add("area-comandos");
         comandos.setAlignment(Pos.CENTER_LEFT);
         comandos.setPadding(new Insets(8, 14, 8, 14));
+        comandos.setFillHeight(false);
+        
 
-        Button atualizarButton = new Button("↻ ATUALIZAR DADOS");
+        Button atualizarButton = new Button("ATUALIZAR DADOS");
+        atualizarButton.setGraphic(carregarIcone("atualizar.png", 14, 14));
+        atualizarButton.setContentDisplay(ContentDisplay.LEFT);
+        atualizarButton.setGraphicTextGap(4);
         atualizarButton.getStyleClass().add("botao-acao");
         atualizarButton.setOnAction(event -> mostrarAviso("Atualização", "A integração com as bases reais será adicionada depois. Por enquanto, o sistema usa uma base simulada."));
-        VBox estadoBaseTabela = criarMiniTabelaEstadoBase();
+        
+        MiniTabelaEstadoBase estadoBaseTabela = new MiniTabelaEstadoBase(estadoCombo, baseEstadoLabel);
 
-        Button valorPadraoButton = new Button("🔍 BUSCAR VALOR PADRÃO");
+        Button valorPadraoButton = new Button("BUSCAR VALOR PADRÃO");
+        valorPadraoButton.setGraphic(carregarIcone("lupa.png", 14, 14));
+        valorPadraoButton.setContentDisplay(ContentDisplay.LEFT);
+        valorPadraoButton.setGraphicTextGap(4);
         valorPadraoButton.getStyleClass().add("botao-busca");
         valorPadraoButton.setOnAction(event -> aplicarValorPadrao());
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        GridPane resumo = criarResumoSuperior();
+        GridPane resumo = new TabelaResumo(
+                totalPropostaLabel,
+                totalComIpiLabel,
+                resultadoAtualLabel,
+                resultadoAnteriorLabel
+        );
 
         comandos.getChildren().addAll(atualizarButton, estadoBaseTabela, valorPadraoButton, spacer, resumo);
 
         topo.getChildren().addAll(cabecalho, comandos);
         return topo;
     }
-
     
-    private VBox criarMiniTabelaEstadoBase() {
-        Label tituloEstado = new Label("ESTADO");
-        tituloEstado.setPrefSize(95, 26);
-        tituloEstado.setAlignment(Pos.CENTER);
-        tituloEstado.setStyle(
-            "-fx-background-color: #d9d9d9;" +
-            "-fx-border-color: #555555;" +
-            "-fx-border-width: 0 2 2 0;" +
-            "-fx-font-size: 14px;" +
-            "-fx-font-weight: bold;" +
-            "-fx-text-fill: #555555;"
-        );
-
-        Label tituloBase = new Label("BASE PARA O ESTADO");
-        tituloBase.setPrefSize(245, 26);
-        tituloBase.setAlignment(Pos.CENTER);
-        tituloBase.setStyle(
-            "-fx-background-color: #d9d9d9;" +
-            "-fx-border-color: #555555;" +
-            "-fx-border-width: 0 0 2 0;" +
-            "-fx-font-size: 14px;" +
-            "-fx-font-weight: bold;" +
-            "-fx-text-fill: #555555;"
-        );
-
-        estadoCombo.setPrefWidth(95);
-        estadoCombo.setMaxWidth(95);
-        estadoCombo.setStyle(
-            "-fx-background-color: transparent;" +
-            "-fx-border-color: transparent;" +
-            "-fx-font-size: 14px;" +
-            "-fx-padding: 0;"
-        );
-
-        baseEstadoLabel.setPrefWidth(245);
-        baseEstadoLabel.setMaxWidth(245);
-        baseEstadoLabel.setAlignment(Pos.CENTER);
-        baseEstadoLabel.setStyle(
-            "-fx-font-size: 14px;" +
-            "-fx-text-fill: #555555;"
-        );
-
-        StackPane celulaEstado = new StackPane(estadoCombo);
-        celulaEstado.setPrefSize(95, 28);
-        celulaEstado.setStyle(
-            "-fx-background-color: #eeeeee;" +
-            "-fx-border-color: #555555;" +
-            "-fx-border-width: 0 2 0 0;"
-        );
-
-        StackPane celulaBase = new StackPane(baseEstadoLabel);
-        celulaBase.setPrefSize(245, 28);
-        celulaBase.setStyle(
-            "-fx-background-color: #eeeeee;"
-        );
-
-        HBox linhaCabecalho = new HBox(tituloEstado, tituloBase);
-        HBox linhaValores = new HBox(celulaEstado, celulaBase);
-
-        VBox tabela = new VBox(linhaCabecalho, linhaValores);
-        tabela.setStyle(
-            "-fx-border-color: #555555;" +
-            "-fx-border-width: 2;" +
-            "-fx-background-color: #eeeeee;"
-        );
-
-        return tabela;
-    }
     
-    private GridPane criarResumoSuperior() {
-        GridPane resumo = new GridPane();
-        resumo.getStyleClass().add("resumo-superior");
-        resumo.setHgap(0);
-        resumo.setVgap(0);
-
-        adicionarCelulaResumo(resumo, "RESULTADOS", 0, 0, true);
-        adicionarCelulaResumo(resumo, "VALOR TOTAL", 1, 0, true);
-        adicionarCelulaResumo(resumo, "VALOR TOTAL + IPI", 2, 0, true);
-
-        adicionarCelulaResumo(resumo, "RESULTADO PROPOSTA", 0, 1, false);
-        adicionarValorResumo(resumo, totalPropostaLabel, 1, 1);
-        adicionarValorResumo(resumo, totalComIpiLabel, 2, 1);
-
-        adicionarCelulaResumo(resumo, "RESULTADO ATUAL", 0, 2, false);
-        adicionarValorResumo(resumo, resultadoAtualLabel, 1, 2);
-        adicionarCelulaResumo(resumo, "", 2, 2, false);
-
-        adicionarCelulaResumo(resumo, "RESULTADO ANTERIOR", 0, 3, false);
-        adicionarValorResumo(resumo, resultadoAnteriorLabel, 1, 3);
-        adicionarCelulaResumo(resumo, "", 2, 3, false);
-
-        return resumo;
-    }
-
-    private void adicionarCelulaResumo(GridPane grid, String texto, int col, int row, boolean titulo) {
-        Label label = new Label(texto);
-        label.getStyleClass().add(titulo ? "resumo-cabecalho" : "resumo-celula");
-        label.setMaxWidth(Double.MAX_VALUE);
-        label.setAlignment(Pos.CENTER);
-        label.setPrefWidth(col == 0 ? 155 : 120);
-        grid.add(label, col, row);
-    }
-
-    private void adicionarValorResumo(GridPane grid, Label label, int col, int row) {
-        label.getStyleClass().add("resumo-celula");
-        label.setMaxWidth(Double.MAX_VALUE);
-        label.setAlignment(Pos.CENTER_RIGHT);
-        label.setPrefWidth(120);
-        grid.add(label, col, row);
-    }
 
     private TableView<ItemAnalise> criarTabela() {
         tabela = new TableView<>(itens);
@@ -284,13 +208,8 @@ public class telaInicial extends Application {
 
         TableColumn<ItemAnalise, String> codigoCol = new TableColumn<>("CÓDIGO");
         codigoCol.setCellValueFactory(data -> data.getValue().codigoProperty());
-        codigoCol.setCellFactory(TextFieldTableCell.forTableColumn());
-        codigoCol.setOnEditCommit(event -> {
-            ItemAnalise item = event.getRowValue();
-            item.setCodigo(event.getNewValue());
-            buscarDadosDoItem(item);
-        });
-        codigoCol.setPrefWidth(145);
+        codigoCol.setCellFactory(col -> new CodigoComBotaoCell());
+        codigoCol.setPrefWidth(170);
 
         TableColumn<ItemAnalise, String> descricaoCol = new TableColumn<>("DESCRIÇÃO");
         descricaoCol.setCellValueFactory(data -> data.getValue().descricaoProperty());
@@ -343,21 +262,19 @@ public class telaInicial extends Application {
         dataCustoCol.getStyleClass().add("coluna-vermelha");
         dataCustoCol.setPrefWidth(110);
 
-        TableColumn<ItemAnalise, String> registroAtualCol = new TableColumn<>("REG. CUSTO ATUAL");
-        registroAtualCol.setCellValueFactory(data -> data.getValue().registroCustoAtualProperty());
-        registroAtualCol.getStyleClass().add("coluna-vermelha");
-        registroAtualCol.setPrefWidth(155);
 
         TableColumn<ItemAnalise, BigDecimal> margemPromobCol = new TableColumn<>("MARGEM PROMOB");
         margemPromobCol.setCellValueFactory(data -> data.getValue().margemPromobProperty());
         margemPromobCol.setCellFactory(col -> new MargemTableCell());
         margemPromobCol.getStyleClass().add("coluna-laranja");
         margemPromobCol.setPrefWidth(130);
+        
+        TableColumn<ItemAnalise, LocalDate> dataCustoPromobCol = new TableColumn<>("DATA CUSTO");
+        dataCustoPromobCol.setCellValueFactory(data -> data.getValue().dataCustoPromobProperty());
+        dataCustoPromobCol.setCellFactory(col -> new DataTableCell());
+        dataCustoPromobCol.getStyleClass().add("coluna-laranja");
+        dataCustoPromobCol.setPrefWidth(110);
 
-        TableColumn<ItemAnalise, String> registroPromobCol = new TableColumn<>("REG. CUSTO PROMOB");
-        registroPromobCol.setCellValueFactory(data -> data.getValue().registroCustoPromobProperty());
-        registroPromobCol.getStyleClass().add("coluna-laranja");
-        registroPromobCol.setPrefWidth(160);
 
         TableColumn<ItemAnalise, BigDecimal> variacaoAnteriorCol = new TableColumn<>("VARIAÇÃO ANTERIOR");
         variacaoAnteriorCol.setCellValueFactory(data -> data.getValue().variacaoAnteriorProperty());
@@ -370,22 +287,34 @@ public class telaInicial extends Application {
         margemAnteriorCol.setCellFactory(col -> new MargemTableCell());
         margemAnteriorCol.getStyleClass().add("coluna-azul");
         margemAnteriorCol.setPrefWidth(140);
-
-        TableColumn<ItemAnalise, String> registroAnteriorCol = new TableColumn<>("REG. CUSTO ANTERIOR");
-        registroAnteriorCol.setCellValueFactory(data -> data.getValue().registroCustoAnteriorProperty());
-        registroAnteriorCol.getStyleClass().add("coluna-azul");
-        registroAnteriorCol.setPrefWidth(170);
+        
+        TableColumn<ItemAnalise, LocalDate> dataCustoAnteriorCol = new TableColumn<>("DATA CUSTO");
+        dataCustoAnteriorCol.setCellValueFactory(data -> data.getValue().dataCustoAnteriorProperty());
+        dataCustoAnteriorCol.setCellFactory(col -> new DataTableCell());
+        dataCustoAnteriorCol.getStyleClass().add("coluna-azul");
+        dataCustoAnteriorCol.setPrefWidth(110);
 
         TableColumn<ItemAnalise, String> baseAtualGrupo = new TableColumn<>("BASE ATUAL (GERENCIAL)");
-        baseAtualGrupo.getColumns().addAll(variacaoAtualCol, margemAtualCol, dataCustoCol, registroAtualCol);
+        baseAtualGrupo.getColumns().addAll(
+                variacaoAtualCol,
+                margemAtualCol,
+                dataCustoCol
+        );
         baseAtualGrupo.getStyleClass().add("grupo-vermelho");
 
         TableColumn<ItemAnalise, String> basePromobGrupo = new TableColumn<>("BASE PROMOB");
-        basePromobGrupo.getColumns().addAll(margemPromobCol, registroPromobCol);
+        basePromobGrupo.getColumns().addAll(
+                margemPromobCol,
+                dataCustoPromobCol
+        );
         basePromobGrupo.getStyleClass().add("grupo-laranja");
 
         TableColumn<ItemAnalise, String> analiseAnteriorGrupo = new TableColumn<>("ANÁLISE ANTERIOR");
-        analiseAnteriorGrupo.getColumns().addAll(variacaoAnteriorCol, margemAnteriorCol, registroAnteriorCol);
+        analiseAnteriorGrupo.getColumns().addAll(
+                variacaoAnteriorCol,
+                margemAnteriorCol,
+                dataCustoAnteriorCol
+        );
         analiseAnteriorGrupo.getStyleClass().add("grupo-azul");
 
         tabela.getColumns().addAll(
@@ -525,6 +454,75 @@ public class telaInicial extends Application {
         return valor.setScale(2, RoundingMode.HALF_UP).toString().replace('.', ',') + "%";
     }
 
+    private class CodigoComBotaoCell extends TableCell<ItemAnalise, String> {
+        private final TextField campoCodigo = new TextField();
+        private final Button botaoOpcoes = new Button();
+        private final HBox container = new HBox(4);
+
+        public CodigoComBotaoCell() {
+            campoCodigo.getStyleClass().add("campo-codigo-tabela");
+            campoCodigo.setMaxWidth(Double.MAX_VALUE);
+
+            botaoOpcoes.getStyleClass().add("botao-opcoes-item");
+            botaoOpcoes.setGraphic(carregarIcone("item-opcoes.png", 18, 22));
+            botaoOpcoes.setFocusTraversable(false);
+
+            HBox.setHgrow(campoCodigo, Priority.ALWAYS);
+
+            container.setAlignment(Pos.CENTER_LEFT);
+            container.getChildren().addAll(campoCodigo, botaoOpcoes);
+
+            campoCodigo.setOnAction(event -> confirmarCodigo());
+
+            campoCodigo.focusedProperty().addListener((obs, estavaFocado, estaFocado) -> {
+                if (!estaFocado) {
+                    confirmarCodigo();
+                }
+            });
+
+            botaoOpcoes.setOnAction(event -> {
+                ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+
+                if (item != null) {
+                    mostrarAviso(
+                            "Opções do item",
+                            "Função do botão será definida depois.\nItem: " + item.getCodigo()
+                    );
+                }
+            });
+        }
+
+        @Override
+        protected void updateItem(String codigo, boolean empty) {
+            super.updateItem(codigo, empty);
+
+            if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                setGraphic(null);
+                setText(null);
+                return;
+            }
+
+            campoCodigo.setText(codigo == null ? "" : codigo);
+            setText(null);
+            setGraphic(container);
+        }
+
+        private void confirmarCodigo() {
+            ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+
+            if (item == null) {
+                return;
+            }
+
+            String novoCodigo = campoCodigo.getText() == null ? "" : campoCodigo.getText().trim();
+
+            if (!novoCodigo.equals(item.getCodigo())) {
+                item.setCodigo(novoCodigo);
+                buscarDadosDoItem(item);
+            }
+        }
+    }
+    
     private static class InteiroConverter extends StringConverter<Integer> {
         @Override
         public String toString(Integer value) {
