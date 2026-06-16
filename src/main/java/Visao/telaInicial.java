@@ -136,15 +136,19 @@ public class telaInicial extends Application {
         HBox cabecalho = new HBox(20);
         cabecalho.getStyleClass().add("cabecalho");
         cabecalho.setAlignment(Pos.CENTER_LEFT);
-        cabecalho.setPadding(new Insets(12, 14, 10, 14));
-
-        VBox logoBox = new VBox(0);
-        ImageView logoIcone = carregarIcone("logo.png", 38, 28);
-        Label logoTexto = new Label("PLASNOX");
-        logoTexto.getStyleClass().add("logo-texto");
-        logoBox.getChildren().addAll(logoIcone, logoTexto);
+        cabecalho.setPadding(new Insets(12, 14, 10, 14));cabecalho.setPadding(new Insets(10, 14, 8, 14));
+        cabecalho.setMinHeight(72);
+        cabecalho.setPrefHeight(72);
+        
+        
+        VBox logoBox = new VBox();
         logoBox.setAlignment(Pos.CENTER_LEFT);
         logoBox.setPrefWidth(150);
+        logoBox.setMinWidth(150);
+        logoBox.setMaxWidth(150);
+
+        ImageView logo = carregarIcone("logo-plasnox.png", 80, 48);
+        logoBox.getChildren().add(logo);
 
         Label titulo = new Label("ANÁLISE DE MARGEM EM ORÇAMENTO COMERCIAL");
         titulo.getStyleClass().add("titulo-principal");
@@ -457,19 +461,23 @@ public class telaInicial extends Application {
     private class CodigoComBotaoCell extends TableCell<ItemAnalise, String> {
         private final TextField campoCodigo = new TextField();
         private final Button botaoOpcoes = new Button();
-        private final HBox container = new HBox(4);
+        private final HBox container = new HBox(2);
 
         public CodigoComBotaoCell() {
             campoCodigo.getStyleClass().add("campo-codigo-tabela");
             campoCodigo.setMaxWidth(Double.MAX_VALUE);
 
             botaoOpcoes.getStyleClass().add("botao-opcoes-item");
-            botaoOpcoes.setGraphic(carregarIcone("item-opcoes.png", 18, 22));
+            botaoOpcoes.setGraphic(carregarIcone("item-opcoes.png", 10, 16));
             botaoOpcoes.setFocusTraversable(false);
+
+            botaoOpcoes.setMinSize(18, 22);
+            botaoOpcoes.setPrefSize(18, 22);
+            botaoOpcoes.setMaxSize(18, 22);
 
             HBox.setHgrow(campoCodigo, Priority.ALWAYS);
 
-            container.setAlignment(Pos.CENTER_LEFT);
+            container.setAlignment(Pos.CENTER);
             container.getChildren().addAll(campoCodigo, botaoOpcoes);
 
             campoCodigo.setOnAction(event -> confirmarCodigo());

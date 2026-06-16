@@ -1,15 +1,15 @@
 .root-app {
-    -fx-background-color: #c9c5ba;
+    -fx-background-color: #BCB8AE;
     -fx-font-family: "Segoe UI", Arial, sans-serif;
     -fx-font-size: 12px;
 }
 
 .topo {
-    -fx-background-color: #c9c5ba;
+    -fx-background-color: #BCB8AE;
 }
 
 .cabecalho {
-    -fx-background-color: #c8c8c8;
+    -fx-background-color: #BFBFBF;
 }
 
 .logo-icone {
@@ -21,7 +21,9 @@
 
 .botao-opcoes-item {
     -fx-background-color: transparent;
+    -fx-background-insets: 0;
     -fx-border-color: transparent;
+    -fx-border-width: 0;
     -fx-padding: 0;
     -fx-cursor: hand;
 }
@@ -64,36 +66,45 @@
 
 .titulo-principal {
     -fx-font-size: 25px;
-    -fx-font-weight: 800;
-    -fx-text-fill: #111111;
+    -fx-font-weight: bold;
+    -fx-text-fill: #000000;
 }
 
 .botao-config {
     -fx-background-color: transparent;
-    -fx-font-size: 22px;
-    -fx-text-fill: #555555;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 4;
+    -fx-font-size: 20px;
+    -fx-text-fill: #505050;
     -fx-cursor: hand;
 }
 
+.botao-config:hover {
+    -fx-background-color: #D9D9D9;
+    -fx-background-radius: 4;
+}
+
 .area-comandos {
-    -fx-background-color: #c9c5ba;
+    -fx-background-color: #BCB8AE;
 }
 
 .botao-acao,
 .botao-busca {
-    -fx-background-color: #ffffff;
+    -fx-background-color: #FFFFFF;
     -fx-background-insets: 0;
     -fx-background-radius: 4;
 
-    -fx-border-color: #666666;
-    -fx-border-width: 1;
+    -fx-border-color: #7B7B7B;
+    -fx-border-width: 1.2;
     -fx-border-radius: 4;
     -fx-border-insets: 0;
 
     -fx-padding: 3 8 3 6;
+
     -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-text-fill: #1c1c1c;
+    -fx-text-fill: #000000;
 
     -fx-alignment: center;
     -fx-content-display: left;
@@ -103,7 +114,12 @@
 
 .botao-acao:hover,
 .botao-busca:hover {
-    -fx-background-color: #f2f2f2;
+    -fx-background-color: #E9E9E9;
+}
+
+.botao-acao:pressed,
+.botao-busca:pressed {
+    -fx-background-color: #D9D9D9;
 }
 
 .campo-codigo-tabela {
@@ -207,57 +223,62 @@
 }
 
 .tabela-analise {
-    -fx-background-color: #c9c5ba;
-    -fx-table-cell-border-color: #595959;
+    -fx-background-color: #BCB8AE;
+    -fx-table-cell-border-color: #7B7B7B;
 }
 
 .tabela-analise .column-header-background {
-    -fx-background-color: #4a4a4a;
+    -fx-background-color: #505050;
 }
 
 .tabela-analise .column-header,
 .tabela-analise .filler {
-    -fx-background-color: #4a4a4a;
-    -fx-border-color: #606060;
+    -fx-background-color: #505050;
+    -fx-border-color: #7B7B7B;
+    -fx-border-width: 0 1 1 0;
 }
 
 .tabela-analise .column-header .label {
-    -fx-text-fill: white;
-    -fx-font-size: 11px;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
+    -fx-alignment: center;
 }
 
 .tabela-analise .table-row-cell:odd {
-    -fx-background-color: #eeeeee;
+    -fx-background-color: #E9E9E9;
 }
 
 .tabela-analise .table-row-cell:even {
-    -fx-background-color: #dcdcdc;
+    -fx-background-color: #D9D9D9;
 }
 
 .tabela-analise .table-row-cell:selected {
-    -fx-background-color: #b9d7ff;
+    -fx-background-color: #ADADAD;
 }
 
 .tabela-analise .table-cell {
-    -fx-border-color: transparent #595959 transparent transparent;
-    -fx-padding: 4 6 4 6;
-    -fx-text-fill: #111111;
+    -fx-border-color: transparent #7B7B7B transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 0 6 0 6;
+    -fx-text-fill: #000000;
+    -fx-font-size: 13px;
+    -fx-alignment: center;
 }
 
 .grupo-vermelho .column-header,
 .coluna-vermelha .column-header {
-    -fx-background-color: #f51f1f;
+    -fx-background-color: #F31D20;
 }
 
 .grupo-laranja .column-header,
 .coluna-laranja .column-header {
-    -fx-background-color: #f5aa00;
+    -fx-background-color: #F9AC05;
 }
 
 .grupo-azul .column-header,
 .coluna-azul .column-header {
-    -fx-background-color: #1266aa;
+    -fx-background-color: #0065A8;
 }
 
 .margem-baixa {
@@ -276,10 +297,12 @@
 }
 
 .rodape {
-    -fx-background-color: #c9c5ba;
-    -fx-border-color: #777777 transparent transparent transparent;
+    -fx-background-color: #BCB8AE;
+    -fx-border-color: #7B7B7B;
+    -fx-border-width: 1 0 0 0;
 }
 
 .texto-rodape {
-    -fx-text-fill: #333333;
+    -fx-text-fill: #000000;
+    -fx-font-size: 12px;
 }

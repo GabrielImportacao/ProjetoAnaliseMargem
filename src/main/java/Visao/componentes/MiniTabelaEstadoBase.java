@@ -74,7 +74,8 @@ public class MiniTabelaEstadoBase extends VBox {
         setPrefSize(larguraEstado + larguraBase, alturaCabecalho + alturaValor);
         setMaxSize(larguraEstado + larguraBase, alturaCabecalho + alturaValor);
         setStyle(
-                "-fx-background-color: transparent;" +
+        		"-fx-background-color: #E9E9E9;" +
+        		"-fx-border-color: #505050;" +
                 "-fx-padding: 0;"
         );
     }
@@ -86,8 +87,8 @@ public class MiniTabelaEstadoBase extends VBox {
         label.setPrefSize(largura, altura);
         label.setMaxSize(largura, altura);
         label.setStyle(
-                "-fx-background-color: #d9d9d9;" +
-                "-fx-border-color: #555555;" +
+        		"-fx-background-color: #D9D9D9;" +
+        		"-fx-border-color: #505050;" +
                 "-fx-border-width: " + borda + ";" +
                 "-fx-font-size: 14px;" +
                 "-fx-font-weight: bold;" +

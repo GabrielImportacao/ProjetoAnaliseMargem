@@ -63,7 +63,7 @@ public class TabelaResumo extends GridPane {
         label.setStyle(
                 "-fx-font-size: 10px;" +
                 "-fx-font-weight: bold;" +
-                "-fx-text-fill: #333333;"
+                "-fx-text-fill: #000000;"
         );
 
         return criarCelulaBase(label, col, row, false);
@@ -86,8 +86,8 @@ public class TabelaResumo extends GridPane {
         String borda = montarBorda(col, row);
 
         celula.setStyle(
-                "-fx-background-color: " + (cabecalho ? "#d9d9d9" : "#eeeeee") + ";" +
-                "-fx-border-color: #555555;" +
+                "-fx-background-color: " + (cabecalho ? "#D9D9D9" : "#E9E9E9") + ";" +
+                "-fx-border-color: #505050;" +
                 "-fx-border-width: " + borda + ";" +
                 "-fx-padding: 0;"
         );
