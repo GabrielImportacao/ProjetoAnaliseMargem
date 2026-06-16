@@ -35,6 +35,19 @@ public class ItemAnalise {
     private final ObjectProperty<BigDecimal> custoAtual = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> custoPromob = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> custoAnterior = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    private final ObjectProperty<BigDecimal> precoPadraoVenda = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    
+    public BigDecimal getPrecoPadraoVenda() {
+        return precoPadraoVenda.get();
+    }
+
+    public void setPrecoPadraoVenda(BigDecimal precoPadraoVenda) {
+        this.precoPadraoVenda.set(precoPadraoVenda == null ? BigDecimal.ZERO : precoPadraoVenda);
+    }
+
+    public ObjectProperty<BigDecimal> precoPadraoVendaProperty() {
+        return precoPadraoVenda;
+    }
 
     public String getCodigo() {
         return codigo.get();
@@ -261,9 +274,10 @@ public class ItemAnalise {
             setRegistroCustoAtual("");
             setRegistroCustoPromob("");
             setRegistroCustoAnterior("");
-            setDataCustoAtual(null);
-            setDataCustoPromob(null);
-            setDataCustoAnterior(null);
+            setPrecoPadraoVenda(dados.getPrecoPadraoVenda());
+            setDataCustoAtual(dados.getDataCustoAtual());
+            setDataCustoPromob(dados.getDataCustoPromob());
+            setDataCustoAnterior(dados.getDataCustoAnterior());
             return;
         }
 
@@ -275,7 +289,7 @@ public class ItemAnalise {
         setRegistroCustoPromob(dados.getRegistroCustoPromob());
         setRegistroCustoAnterior(dados.getRegistroCustoAnterior());
         setDataCustoAtual(dados.getDataCustoAtual());
-        setDataCustoPromob(dados.getDataCustoAtual());
-        setDataCustoAnterior(dados.getDataCustoAtual());
+        setDataCustoPromob(dados.getDataCustoPromob());
+        setDataCustoAnterior(dados.getDataCustoAnterior());
     }
 }

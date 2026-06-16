@@ -20,6 +20,7 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import java.util.Map;
+import java.util.Optional;
 
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -259,7 +260,15 @@ public class telaInicial extends Application {
         margemAtualCol.setCellFactory(col -> new MargemTableCell());
         margemAtualCol.getStyleClass().add("coluna-vermelha");
         margemAtualCol.setPrefWidth(115);
-
+        
+        TableColumn<ItemAnalise, BigDecimal> custoAtualCol = new TableColumn<>("CUSTO");
+        custoAtualCol.setCellValueFactory(data ->
+        new ReadOnlyObjectWrapper<>(data.getValue().getCustoAtual())
+);
+        custoAtualCol.setCellFactory(col -> new BigDecimalTableCell(true));
+        custoAtualCol.getStyleClass().add("coluna-vermelha");
+        custoAtualCol.setPrefWidth(105);
+        
         TableColumn<ItemAnalise, LocalDate> dataCustoCol = new TableColumn<>("DATA CUSTO");
         dataCustoCol.setCellValueFactory(data -> data.getValue().dataCustoAtualProperty());
         dataCustoCol.setCellFactory(col -> new DataTableCell());
@@ -272,6 +281,14 @@ public class telaInicial extends Application {
         margemPromobCol.setCellFactory(col -> new MargemTableCell());
         margemPromobCol.getStyleClass().add("coluna-laranja");
         margemPromobCol.setPrefWidth(130);
+        
+        TableColumn<ItemAnalise, BigDecimal> custoPromobCol = new TableColumn<>("CUSTO");
+        custoPromobCol.setCellValueFactory(data ->
+        new ReadOnlyObjectWrapper<>(data.getValue().getCustoPromob())
+);
+        custoPromobCol.setCellFactory(col -> new BigDecimalTableCell(true));
+        custoPromobCol.getStyleClass().add("coluna-laranja");
+        custoPromobCol.setPrefWidth(105);
         
         TableColumn<ItemAnalise, LocalDate> dataCustoPromobCol = new TableColumn<>("DATA CUSTO");
         dataCustoPromobCol.setCellValueFactory(data -> data.getValue().dataCustoPromobProperty());
@@ -292,6 +309,14 @@ public class telaInicial extends Application {
         margemAnteriorCol.getStyleClass().add("coluna-azul");
         margemAnteriorCol.setPrefWidth(140);
         
+        TableColumn<ItemAnalise, BigDecimal> custoAnteriorCol = new TableColumn<>("CUSTO");
+        custoAnteriorCol.setCellValueFactory(data ->
+        new ReadOnlyObjectWrapper<>(data.getValue().getCustoAnterior())
+);
+        custoAnteriorCol.setCellFactory(col -> new BigDecimalTableCell(true));
+        custoAnteriorCol.getStyleClass().add("coluna-azul");
+        custoAnteriorCol.setPrefWidth(105);
+        
         TableColumn<ItemAnalise, LocalDate> dataCustoAnteriorCol = new TableColumn<>("DATA CUSTO");
         dataCustoAnteriorCol.setCellValueFactory(data -> data.getValue().dataCustoAnteriorProperty());
         dataCustoAnteriorCol.setCellFactory(col -> new DataTableCell());
@@ -302,6 +327,7 @@ public class telaInicial extends Application {
         baseAtualGrupo.getColumns().addAll(
                 variacaoAtualCol,
                 margemAtualCol,
+                custoAtualCol,
                 dataCustoCol
         );
         baseAtualGrupo.getStyleClass().add("grupo-vermelho");
@@ -309,6 +335,7 @@ public class telaInicial extends Application {
         TableColumn<ItemAnalise, String> basePromobGrupo = new TableColumn<>("BASE PROMOB");
         basePromobGrupo.getColumns().addAll(
                 margemPromobCol,
+                custoPromobCol,
                 dataCustoPromobCol
         );
         basePromobGrupo.getStyleClass().add("grupo-laranja");
@@ -317,6 +344,7 @@ public class telaInicial extends Application {
         analiseAnteriorGrupo.getColumns().addAll(
                 variacaoAnteriorCol,
                 margemAnteriorCol,
+                custoAnteriorCol,
                 dataCustoAnteriorCol
         );
         analiseAnteriorGrupo.getStyleClass().add("grupo-azul");
@@ -388,18 +416,60 @@ public class telaInicial extends Application {
     }
 
     private void aplicarValorPadrao() {
-        ObservableList<ItemAnalise> selecionados = tabela.getSelectionModel().getSelectedItems();
-        ObservableList<ItemAnalise> alvo = selecionados.isEmpty() ? itens : selecionados;
+        int itensAtualizados = 0;
+        int itensSemPrecoPadrao = 0;
 
-        for (ItemAnalise item : alvo) {
-            if (item.getCustoAtual().compareTo(BigDecimal.ZERO) > 0) {
-                item.setValorUnitario(analiseService.calcularValorPadrao(item, estadoCombo.getValue()));
-                analiseService.recalcular(item);
+        for (ItemAnalise item : itens) {
+            if (!temCodigoPreenchido(item)) {
+                continue;
             }
+
+            if (!valorUnitarioEstaVazio(item)) {
+                continue;
+            }
+
+            Optional<BigDecimal> precoPadrao =
+                    itemService.buscarPrecoPadraoVendaPorCodigo(item.getCodigo());
+
+            if (precoPadrao.isEmpty()) {
+                itensSemPrecoPadrao++;
+                continue;
+            }
+
+            item.setValorUnitario(precoPadrao.get());
+
+            // Garante que os demais dados do item estejam carregados antes de recalcular.
+            if (item.getDescricao() == null || item.getDescricao().isBlank()) {
+                item.aplicarDadosItem(itemService.buscarPorCodigo(item.getCodigo()).orElse(null));
+            }
+
+            analiseService.recalcular(item);
+            itensAtualizados++;
         }
 
         recalcularResumo();
         tabela.refresh();
+
+        if (itensAtualizados == 0) {
+            mostrarAviso(
+                    "Valor padrão",
+                    "Nenhum item foi atualizado. Verifique se existem itens com código preenchido, valor unitário vazio e preço líquido cadastrado na base de itens."
+            );
+        }
+    }
+    
+    private boolean temCodigoPreenchido(ItemAnalise item) {
+        return item != null
+                && item.getCodigo() != null
+                && !item.getCodigo().trim().isEmpty();
+    }
+
+    private boolean valorUnitarioEstaVazio(ItemAnalise item) {
+        if (item == null || item.getValorUnitario() == null) {
+            return true;
+        }
+
+        return item.getValorUnitario().compareTo(BigDecimal.ZERO) == 0;
     }
 
     private void atualizarBaseEstado() {
@@ -583,9 +653,18 @@ public class telaInicial extends Application {
         @Override
         protected void updateItem(BigDecimal item, boolean empty) {
             super.updateItem(item, empty);
-            if (empty || item == null || item.compareTo(BigDecimal.ZERO) == 0) {
+
+            if (empty || item == null) {
                 setText("");
-            } else if (moeda) {
+                return;
+            }
+
+            if (moeda && item.compareTo(BigDecimal.ZERO) == 0) {
+                setText("");
+                return;
+            }
+
+            if (moeda) {
                 setText(formatarMoeda(item));
             } else {
                 setText(formatarPercentual(item));

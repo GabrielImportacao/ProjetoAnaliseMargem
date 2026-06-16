@@ -12,6 +12,9 @@ public final class CaminhosBase {
             "K:\\Importacao\\Troca Publica\\Bancos de Dados (Não Excluir)\\BD_METAL\\BD_METAL_ITEM_AT.xlsb"
     );
 
+    public static final Path CAMINHO_MOVESTQ_DB = Path.of(
+            "K:\\Importacao\\Troca Publica\\Bancos de Dados (Não Excluir)\\SistemaBD\\banco\\movestq.db"
+    );
     private CaminhosBase() {
     }
 }

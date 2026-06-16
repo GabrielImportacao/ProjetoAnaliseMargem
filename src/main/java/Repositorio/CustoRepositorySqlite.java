@@ -2,6 +2,7 @@ package Repositorio;
 
 import Infraestrutura.ConexaoSqlite;
 import Modelo.CustoItem;
+import Modelo.HistoricoCustoItem;
 
 import java.math.BigDecimal;
 import java.sql.*;
@@ -21,6 +22,17 @@ public class CustoRepositorySqlite implements CustoRepository {
         this.conexaoSqlite = new ConexaoSqlite();
     }
 
+    
+    @Override
+    public HistoricoCustoItem buscarHistoricoPrincipalPorItem(String codigoItem) {
+        List<CustoItem> custos = listarCustosPorItem(codigoItem);
+
+        CustoItem custoAtual = custos.size() >= 1 ? custos.get(0) : null;
+        CustoItem custoAnterior = custos.size() >= 2 ? custos.get(1) : null;
+
+        return new HistoricoCustoItem(custoAtual, custoAnterior);
+    }
+    
     @Override
     public Optional<CustoItem> buscarCustoMaisRecentePorItem(String codigoItem) {
         String sql = """

@@ -10,17 +10,34 @@ public class AnaliseService {
     private static final BigDecimal CEM = new BigDecimal("100");
 
     public void recalcular(ItemAnalise item) {
+        if (item == null) {
+            return;
+        }
+
         BigDecimal valorUnitario = valorSeguro(item.getValorUnitario());
         BigDecimal quantidade = BigDecimal.valueOf(item.getQuantidade());
 
-        item.setValorTotal(valorUnitario.multiply(quantidade).setScale(2, RoundingMode.HALF_UP));
+        item.setValorTotal(valorUnitario.multiply(quantidade));
 
-        item.setMargemAtual(calcularMargem(valorUnitario, item.getCustoAtual()));
-        item.setMargemPromob(calcularMargem(valorUnitario, item.getCustoPromob()));
-        item.setMargemAnterior(calcularMargem(valorUnitario, item.getCustoAnterior()));
+        item.setVariacaoAtual(
+                calcularVariacao(valorUnitario, item.getPrecoPadraoVenda())
+        );
 
-        item.setVariacaoAtual(calcularVariacao(valorUnitario, item.getCustoAtual()));
-        item.setVariacaoAnterior(calcularVariacao(valorUnitario, item.getCustoAnterior()));
+        item.setMargemAtual(
+                calcularMargem(item.getCustoAtual(), valorUnitario)
+        );
+
+        item.setMargemPromob(
+                calcularMargem(item.getCustoPromob(), valorUnitario)
+        );
+
+        item.setVariacaoAnterior(
+                calcularVariacao(valorUnitario, item.getPrecoPadraoVenda())
+        );
+
+        item.setMargemAnterior(
+                calcularMargem(item.getCustoAnterior(), valorUnitario)
+        );
     }
 
     public BigDecimal calcularValorPadrao(ItemAnalise item, EstadoInfo estadoInfo) {
@@ -39,32 +56,39 @@ public class AnaliseService {
         return custo.divide(divisor, 2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal calcularMargem(BigDecimal valorUnitario, BigDecimal custo) {
-        valorUnitario = valorSeguro(valorUnitario);
-        custo = valorSeguro(custo);
+    private BigDecimal calcularVariacao(BigDecimal propostaUnitaria, BigDecimal precoPadraoVenda) {
+        propostaUnitaria = valorSeguro(propostaUnitaria);
+        precoPadraoVenda = valorSeguro(precoPadraoVenda);
 
-        if (valorUnitario.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
+        if (propostaUnitaria.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
         }
 
-        return valorUnitario.subtract(custo)
-                .divide(valorUnitario, 8, RoundingMode.HALF_UP)
-                .multiply(CEM)
-                .setScale(2, RoundingMode.HALF_UP);
+        if (precoPadraoVenda.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+
+        return propostaUnitaria
+                .divide(precoPadraoVenda, 8, RoundingMode.HALF_UP)
+                .subtract(BigDecimal.ONE)
+                .multiply(new BigDecimal("100"));
     }
 
-    private BigDecimal calcularVariacao(BigDecimal valorUnitario, BigDecimal custo) {
-        valorUnitario = valorSeguro(valorUnitario);
-        custo = valorSeguro(custo);
+    private BigDecimal calcularMargem(BigDecimal custoUnitario, BigDecimal propostaUnitaria) {
+        custoUnitario = valorSeguro(custoUnitario);
+        propostaUnitaria = valorSeguro(propostaUnitaria);
 
-        if (custo.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
+        if (propostaUnitaria.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
         }
 
-        return valorUnitario.subtract(custo)
-                .divide(custo, 8, RoundingMode.HALF_UP)
-                .multiply(CEM)
-                .setScale(2, RoundingMode.HALF_UP);
+        if (custoUnitario.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+
+        return custoUnitario
+                .divide(propostaUnitaria, 8, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("100"));
     }
 
     private BigDecimal valorSeguro(BigDecimal valor) {
