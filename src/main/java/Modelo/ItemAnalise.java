@@ -37,6 +37,60 @@ public class ItemAnalise {
     private final ObjectProperty<BigDecimal> custoAnterior = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> precoPadraoVenda = new SimpleObjectProperty<>(BigDecimal.ZERO);
     
+    private final ObjectProperty<BigDecimal> percentualIpi = new SimpleObjectProperty<>(BigDecimal.ZERO);
+
+    private final ObjectProperty<BigDecimal> ipiProposta = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    private final ObjectProperty<BigDecimal> ipiAtual = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    private final ObjectProperty<BigDecimal> ipiAnterior = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    
+    public BigDecimal getPercentualIpi() {
+        return percentualIpi.get();
+    }
+
+    public void setPercentualIpi(BigDecimal percentualIpi) {
+        this.percentualIpi.set(percentualIpi == null ? BigDecimal.ZERO : percentualIpi);
+    }
+
+    public ObjectProperty<BigDecimal> percentualIpiProperty() {
+        return percentualIpi;
+    }
+
+    public BigDecimal getIpiProposta() {
+        return ipiProposta.get();
+    }
+
+    public void setIpiProposta(BigDecimal ipiProposta) {
+        this.ipiProposta.set(ipiProposta == null ? BigDecimal.ZERO : ipiProposta);
+    }
+
+    public ObjectProperty<BigDecimal> ipiPropostaProperty() {
+        return ipiProposta;
+    }
+
+    public BigDecimal getIpiAtual() {
+        return ipiAtual.get();
+    }
+
+    public void setIpiAtual(BigDecimal ipiAtual) {
+        this.ipiAtual.set(ipiAtual == null ? BigDecimal.ZERO : ipiAtual);
+    }
+
+    public ObjectProperty<BigDecimal> ipiAtualProperty() {
+        return ipiAtual;
+    }
+
+    public BigDecimal getIpiAnterior() {
+        return ipiAnterior.get();
+    }
+
+    public void setIpiAnterior(BigDecimal ipiAnterior) {
+        this.ipiAnterior.set(ipiAnterior == null ? BigDecimal.ZERO : ipiAnterior);
+    }
+
+    public ObjectProperty<BigDecimal> ipiAnteriorProperty() {
+        return ipiAnterior;
+    }
+    
     public BigDecimal getPrecoPadraoVenda() {
         return precoPadraoVenda.get();
     }
@@ -268,28 +322,49 @@ public class ItemAnalise {
     public void aplicarDadosItem(DadosItem dados) {
         if (dados == null) {
             setDescricao("ITEM NÃO ENCONTRADO");
+
             setCustoAtual(BigDecimal.ZERO);
             setCustoPromob(BigDecimal.ZERO);
             setCustoAnterior(BigDecimal.ZERO);
+
             setRegistroCustoAtual("");
             setRegistroCustoPromob("");
             setRegistroCustoAnterior("");
-            setPrecoPadraoVenda(dados.getPrecoPadraoVenda());
-            setDataCustoAtual(dados.getDataCustoAtual());
-            setDataCustoPromob(dados.getDataCustoPromob());
-            setDataCustoAnterior(dados.getDataCustoAnterior());
+
+            setDataCustoAtual(null);
+            setDataCustoPromob(null);
+            setDataCustoAnterior(null);
+
+            setPrecoPadraoVenda(BigDecimal.ZERO);
+
+            setPercentualIpi(BigDecimal.ZERO);
+            setIpiProposta(BigDecimal.ZERO);
+            setIpiAtual(BigDecimal.ZERO);
+            setIpiAnterior(BigDecimal.ZERO);
+
             return;
         }
 
         setDescricao(dados.getDescricao());
+
         setCustoAtual(dados.getCustoAtual());
         setCustoPromob(dados.getCustoPromob());
         setCustoAnterior(dados.getCustoAnterior());
+
         setRegistroCustoAtual(dados.getRegistroCustoAtual());
         setRegistroCustoPromob(dados.getRegistroCustoPromob());
         setRegistroCustoAnterior(dados.getRegistroCustoAnterior());
+
         setDataCustoAtual(dados.getDataCustoAtual());
         setDataCustoPromob(dados.getDataCustoPromob());
         setDataCustoAnterior(dados.getDataCustoAnterior());
+
+        setPrecoPadraoVenda(dados.getPrecoPadraoVenda());
+
+        setPercentualIpi(dados.getIpi());
+
+        setIpiProposta(BigDecimal.ZERO);
+        setIpiAtual(BigDecimal.ZERO);
+        setIpiAnterior(BigDecimal.ZERO);
     }
 }

@@ -11,17 +11,78 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class CustoRepositorySqlite implements CustoRepository {
 
     private final ConexaoSqlite conexaoSqlite;
+    private Map<String, List<CustoItem>> cacheCustosPorItem;
 
     public CustoRepositorySqlite() {
         this.conexaoSqlite = new ConexaoSqlite();
     }
 
+    public void limparCache() {
+        cacheCustosPorItem = null;
+    }
+
+    public void preCarregarCache() {
+        carregarCacheSeNecessario();
+    }
+
+    private void carregarCacheSeNecessario() {
+        if (cacheCustosPorItem != null) {
+            return;
+        }
+
+        cacheCustosPorItem = new HashMap<>();
+
+        String sql = """
+                SELECT
+                    c.id,
+                    c.id_item,
+                    c.id_importacao,
+                    c.ano_importacao,
+                    c.numero_importacao,
+                    c.custo,
+                    c.data_custo,
+                    c.arquivo,
+                    a.ultima_modificacao AS ultima_modificacao_arquivo
+                FROM custos c
+                LEFT JOIN arquivos_lidos a
+                    ON a.arquivo = c.arquivo
+                WHERE c.id_item IS NOT NULL
+                ORDER BY
+                    UPPER(TRIM(c.id_item)) ASC,
+                    c.ano_importacao DESC,
+                    a.ultima_modificacao DESC,
+                    c.numero_importacao DESC,
+                    c.id DESC
+                """;
+
+        try (
+                Connection conexao = conexaoSqlite.abrir();
+                PreparedStatement statement = conexao.prepareStatement(sql);
+                ResultSet resultSet = statement.executeQuery()
+        ) {
+            while (resultSet.next()) {
+                CustoItem custo = converterResultSetParaCustoItem(resultSet);
+
+                String chave = normalizarCodigo(custo.getCodigoItem());
+
+                cacheCustosPorItem
+                        .computeIfAbsent(chave, k -> new ArrayList<>())
+                        .add(custo);
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao pré-carregar cache de custos gerenciais.", e);
+        }
+    }
     
     @Override
     public HistoricoCustoItem buscarHistoricoPrincipalPorItem(String codigoItem) {
@@ -33,95 +94,32 @@ public class CustoRepositorySqlite implements CustoRepository {
         return new HistoricoCustoItem(custoAtual, custoAnterior);
     }
     
+    private String normalizarCodigo(String codigoItem) {
+        return codigoItem == null ? "" : codigoItem.trim().toUpperCase();
+    }
+    
     @Override
     public Optional<CustoItem> buscarCustoMaisRecentePorItem(String codigoItem) {
-        String sql = """
-                SELECT
-                    c.id,
-                    c.id_item,
-                    c.id_importacao,
-                    c.ano_importacao,
-                    c.numero_importacao,
-                    c.custo,
-                    c.data_custo,
-                    c.arquivo,
-                    al.ultima_modificacao AS ultima_modificacao_arquivo
-                FROM custos c
-                LEFT JOIN arquivos_lidos al
-                    ON TRIM(c.arquivo) = TRIM(al.arquivo)
-                WHERE UPPER(TRIM(c.id_item)) = UPPER(TRIM(?))
-                ORDER BY
-                    c.ano_importacao DESC,
-                    COALESCE(al.ultima_modificacao, 0) DESC,
-                    c.numero_importacao DESC,
-                    c.data_custo DESC,
-                    c.id DESC
-                LIMIT 1
-                """;
+        List<CustoItem> custos = listarCustosPorItem(codigoItem);
 
-        try (
-                Connection conexao = conexaoSqlite.abrir();
-                PreparedStatement statement = conexao.prepareStatement(sql)
-        ) {
-            statement.setString(1, codigoItem);
-
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    return Optional.of(converterResultSetParaCustoItem(resultSet));
-                }
-            }
-
-        } catch (Exception e) {
-            throw new RuntimeException("Erro ao buscar custo mais recente do item: " + codigoItem, e);
+        if (custos.isEmpty()) {
+            return Optional.empty();
         }
 
-        return Optional.empty();
+        return Optional.of(custos.get(0));
     }
 
     @Override
     public List<CustoItem> listarCustosPorItem(String codigoItem) {
-        List<CustoItem> custos = new ArrayList<>();
-
-        String sql = """
-                SELECT
-                    c.id,
-                    c.id_item,
-                    c.id_importacao,
-                    c.ano_importacao,
-                    c.numero_importacao,
-                    c.custo,
-                    c.data_custo,
-                    c.arquivo,
-                    al.ultima_modificacao AS ultima_modificacao_arquivo
-                FROM custos c
-                LEFT JOIN arquivos_lidos al
-                    ON TRIM(c.arquivo) = TRIM(al.arquivo)
-                WHERE UPPER(TRIM(c.id_item)) = UPPER(TRIM(?))
-                ORDER BY
-                    c.ano_importacao DESC,
-                    COALESCE(al.ultima_modificacao, 0) DESC,
-                    c.numero_importacao DESC,
-                    c.data_custo DESC,
-                    c.id DESC
-                """;
-
-        try (
-                Connection conexao = conexaoSqlite.abrir();
-                PreparedStatement statement = conexao.prepareStatement(sql)
-        ) {
-            statement.setString(1, codigoItem);
-
-            try (ResultSet resultSet = statement.executeQuery()) {
-                while (resultSet.next()) {
-                    custos.add(converterResultSetParaCustoItem(resultSet));
-                }
-            }
-
-        } catch (Exception e) {
-            throw new RuntimeException("Erro ao listar custos do item: " + codigoItem, e);
+        if (codigoItem == null || codigoItem.isBlank()) {
+            return Collections.emptyList();
         }
 
-        return custos;
+        carregarCacheSeNecessario();
+
+        String chave = normalizarCodigo(codigoItem);
+
+        return cacheCustosPorItem.getOrDefault(chave, Collections.emptyList());
     }
 
     private CustoItem converterResultSetParaCustoItem(ResultSet resultSet) throws SQLException {

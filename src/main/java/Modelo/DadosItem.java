@@ -19,6 +19,7 @@ public class DadosItem {
     private final LocalDate dataCustoPromob;
     private final LocalDate dataCustoAnterior;
     
+    private final BigDecimal ipi;
     private final BigDecimal precoPadraoVenda;
 
     public DadosItem(String codigo,
@@ -32,7 +33,8 @@ public class DadosItem {
                      LocalDate dataCustoAtual,
                      LocalDate dataCustoPromob,
                      LocalDate dataCustoAnterior,
-    				 BigDecimal precoPadraoVenda){
+    				 BigDecimal precoPadraoVenda,
+    				 BigDecimal ipi){
         this.codigo = codigo;
         this.descricao = descricao;
         this.custoAtual = custoAtual;
@@ -45,8 +47,13 @@ public class DadosItem {
         this.dataCustoPromob = dataCustoPromob;
         this.dataCustoAnterior = dataCustoAnterior;
         this.precoPadraoVenda = precoPadraoVenda;
+        this.ipi = ipi;
     }
 
+    public BigDecimal getIpi() {
+        return ipi;
+    }
+    
     public BigDecimal getPrecoPadraoVenda() {
         return precoPadraoVenda;
     }

@@ -12,6 +12,37 @@ public class DadosItemService {
     private final ItemRepository itemRepository;
     private final CustoRepository custoRepository;
     private final CustoPromobRepository custoPromobRepository;
+    
+    
+    public void preCarregarBases() {
+        if (itemRepository instanceof ItemRepositoryXlsb repositoryXlsb) {
+            repositoryXlsb.preCarregarCache();
+        }
+
+        if (custoRepository instanceof CustoRepositorySqlite repositorySqlite) {
+            repositorySqlite.preCarregarCache();
+        }
+
+        if (custoPromobRepository instanceof CustoPromobRepositorySqlite repositoryPromobSqlite) {
+            repositoryPromobSqlite.preCarregarCache();
+        }
+    }
+
+    public void recarregarBases() {
+        if (itemRepository instanceof ItemRepositoryXlsb repositoryXlsb) {
+            repositoryXlsb.limparCache();
+        }
+
+        if (custoRepository instanceof CustoRepositorySqlite repositorySqlite) {
+            repositorySqlite.limparCache();
+        }
+
+        if (custoPromobRepository instanceof CustoPromobRepositorySqlite repositoryPromobSqlite) {
+            repositoryPromobSqlite.limparCache();
+        }
+
+        preCarregarBases();
+    }
 
     public DadosItemService() {
         this.itemRepository = new ItemRepositoryXlsb();
@@ -214,7 +245,8 @@ public class DadosItemService {
         String codigoNormalizado = codigoItem.trim().toUpperCase();
 
         return codigoNormalizado.startsWith("MMR")
-                || codigoNormalizado.startsWith("MSC");
+                || codigoNormalizado.startsWith("MSC")
+                || codigoNormalizado.startsWith("MPR");
     }
     
     private record CustoResolvido(

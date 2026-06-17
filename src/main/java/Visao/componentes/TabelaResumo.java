@@ -17,7 +17,9 @@ public class TabelaResumo extends GridPane {
             Label totalPropostaLabel,
             Label totalComIpiLabel,
             Label resultadoAtualLabel,
-            Label resultadoAnteriorLabel
+            Label resultadoAtualComIpiLabel,
+            Label resultadoAnteriorLabel,
+            Label resultadoAnteriorComIpiLabel
     ) {
         setHgap(0);
         setVgap(0);
@@ -33,11 +35,11 @@ public class TabelaResumo extends GridPane {
 
         add(criarCelulaTexto("RESULTADO ATUAL", 0, 2, false, Pos.CENTER), 0, 2);
         add(criarCelulaValor(resultadoAtualLabel, 1, 2), 1, 2);
-        add(criarCelulaTexto("", 2, 2, false, Pos.CENTER), 2, 2);
+        add(criarCelulaValor(resultadoAtualComIpiLabel, 2, 2), 2, 2);
 
         add(criarCelulaTexto("RESULTADO ANTERIOR", 0, 3, false, Pos.CENTER), 0, 3);
         add(criarCelulaValor(resultadoAnteriorLabel, 1, 3), 1, 3);
-        add(criarCelulaTexto("", 2, 3, false, Pos.CENTER), 2, 3);
+        add(criarCelulaValor(resultadoAnteriorComIpiLabel, 2, 3), 2, 3);
     }
 
     private StackPane criarCelulaTexto(String texto, int col, int row, boolean cabecalho, Pos alinhamento) {

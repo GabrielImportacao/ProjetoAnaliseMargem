@@ -18,7 +18,16 @@ public class ItemRepositoryXlsb implements ItemRepository {
     private final ConexaoPlanilhaXlsb conexaoPlanilha;
 
     private Map<String, ItemCadastro> cacheItens;
+    
+    public void limparCache() {
+        cacheItens = null;
+    }
 
+    public void preCarregarCache() {
+        carregarCacheSeNecessario();
+        limparCache();
+    }
+        
     public ItemRepositoryXlsb() {
         this.conexaoPlanilha = new ConexaoPlanilhaXlsb();
     }

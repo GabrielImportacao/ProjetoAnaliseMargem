@@ -14,6 +14,24 @@ public class ItemService {
         this.dadosItemService = new DadosItemService();
     }
 
+    public void recarregarBases() {
+        dadosItemService.recarregarBases();
+    }
+    
+    public void preCarregarBases() {
+        dadosItemService.preCarregarBases();
+        aquecerConsultasIniciais();
+    }
+
+    private void aquecerConsultasIniciais() {
+        // Consultas internas apenas para aquecer o fluxo completo:
+        // itemRepository + custoRepository + custoPromobRepository + conversão para DadosItem.
+        buscarPorCodigo("MMR1814.1031");
+        buscarPorCodigo("MRT3803.0801");
+        buscarPorCodigo("MMP0201.1004");
+        buscarPorCodigo("MPR3423.1504");
+    }
+    
     public Optional<DadosItem> buscarPorCodigo(String codigo) {
         if (codigo == null || codigo.trim().isEmpty()) {
             return Optional.empty();
@@ -45,7 +63,8 @@ public class ItemService {
                 dadosConsulta.getDataCustoAtual(),
                 dadosConsulta.getDataCustoPromob(),
                 dadosConsulta.getDataCustoAnterior(),
-                dadosConsulta.getPrecoPadraoVenda()
+                dadosConsulta.getPrecoPadraoVenda(),
+                dadosConsulta.getIpi()
         );
     }
     

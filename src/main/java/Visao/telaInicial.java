@@ -2,6 +2,7 @@ package Visao;
 
 import Controle.AnaliseService;
 import Controle.ItemService;
+import Modelo.DadosItem;
 import Modelo.EstadoInfo;
 import Modelo.ItemAnalise;
 import javafx.application.Application;
@@ -9,6 +10,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -21,6 +23,12 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
+
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -48,6 +56,8 @@ public class telaInicial extends Application {
     private final ObservableList<ItemAnalise> itens = FXCollections.observableArrayList();
 
     private final Label totalPropostaLabel = new Label("R$ 0,00");
+    private final Label resultadoAtualComIpiLabel = new Label("R$ 0,00");
+    private final Label resultadoAnteriorComIpiLabel = new Label("R$ 0,00");
     private final Label totalComIpiLabel = new Label("R$ 0,00");
     private final Label resultadoAtualLabel = new Label("R$ 0,00");
     private final Label resultadoAnteriorLabel = new Label("R$ 0,00");
@@ -56,7 +66,23 @@ public class telaInicial extends Application {
     
     
     private TableView<ItemAnalise> tabela;
+    private static final double ALTURA_LINHA_TABELA = 24;
+    private static final double ALTURA_CABECALHO_TABELA = 42;
+    private static final double ALTURA_BARRA_HORIZONTAL = 18;
+    private static final double MARGEM_SEGURANCA_TABELA = 12;
     
+    private static final String CODIGO_LINHA_RODAPE_TABELA = "__RODAPE_TABELA__";
+    private final ItemAnalise linhaRodapeTabela = new ItemAnalise();
+    
+    private StackPane overlayAtualizacao;
+    
+    private final java.util.List<Label> labelsRodapeTabela = new java.util.ArrayList<>();
+
+    private static final int IDX_QUANTIDADE = 2;
+    private static final int IDX_VALOR_TOTAL = 4;
+    private static final int IDX_MARGEM_ATUAL = 6;
+    private static final int IDX_MARGEM_PROMOB = 9;
+    private static final int IDX_MARGEM_ANTERIOR = 13;
     
     private ComboBox<String> comboEstado;
     private Label lblBaseEstado;
@@ -79,18 +105,131 @@ public class telaInicial extends Application {
 
         BorderPane root = new BorderPane();
         root.getStyleClass().add("root-app");
-        root.setTop(criarTopo());
-        root.setCenter(criarTabela());
-        root.setBottom(criarRodape());
 
-        Scene scene = new Scene(root, 1180, 680);
+        VBox topo = criarTopo();
+        TableView<ItemAnalise> tabelaCriada = criarTabela();
+
+        VBox areaCentral = new VBox(tabelaCriada);
+        areaCentral.setAlignment(Pos.TOP_LEFT);
+        VBox.setVgrow(tabelaCriada, Priority.NEVER);
+
+        HBox rodape = criarRodape();
+        root.setTop(topo);
+        root.setCenter(areaCentral);
+        root.setBottom(rodape);
+
+        StackPane rootComOverlay = new StackPane(root, criarOverlayAtualizacao());
+
+        Scene scene = new Scene(rootComOverlay, 1180, 680);
         scene.getStylesheets().add(getClass().getResource("/estilo.css").toExternalForm());
+
+        tabelaCriada.prefHeightProperty().bind(
+                Bindings.createDoubleBinding(
+                        () -> calcularAlturaTabela(root, topo, rodape),
+                        itens,
+                        root.heightProperty(),
+                        topo.heightProperty(),
+                        rodape.heightProperty()
+                )
+        );
+
+        tabelaCriada.minHeightProperty().bind(tabelaCriada.prefHeightProperty());
+        tabelaCriada.maxHeightProperty().bind(tabelaCriada.prefHeightProperty());
 
         stage.setTitle("Programa de Análise de Margem");
         stage.setScene(scene);
         stage.setMinWidth(1050);
         stage.setMinHeight(600);
         stage.show();
+        preCarregarBasesAoIniciar();
+    }
+    
+    private boolean isLinhaRodapeTabela(ItemAnalise item) {
+        return item == linhaRodapeTabela
+                || item != null
+                && CODIGO_LINHA_RODAPE_TABELA.equals(item.getCodigo());
+    }
+
+    private void adicionarLinhaVazia() {
+        int indiceRodape = itens.indexOf(linhaRodapeTabela);
+
+        if (indiceRodape < 0) {
+            itens.add(new ItemAnalise());
+            itens.add(linhaRodapeTabela);
+            return;
+        }
+
+        itens.add(indiceRodape, new ItemAnalise());
+        recalcularResumo();
+        tabela.refresh();
+    }
+
+    private void garantirRodapeNoFinal() {
+        itens.remove(linhaRodapeTabela);
+        itens.add(linhaRodapeTabela);
+    }
+
+    private void atualizarLinhaRodapeTabela() {
+        int quantidadeTotal = 0;
+        BigDecimal valorTotalProposta = BigDecimal.ZERO;
+
+        BigDecimal somaMargemAtual = BigDecimal.ZERO;
+        BigDecimal somaMargemPromob = BigDecimal.ZERO;
+        BigDecimal somaMargemAnterior = BigDecimal.ZERO;
+
+        int qtdMargemAtual = 0;
+        int qtdMargemPromob = 0;
+        int qtdMargemAnterior = 0;
+
+        for (ItemAnalise item : itens) {
+            if (isLinhaRodapeTabela(item) || !temCodigoPreenchido(item)) {
+                continue;
+            }
+
+            quantidadeTotal += item.getQuantidade();
+            valorTotalProposta = valorTotalProposta.add(valorSeguro(item.getValorTotal()));
+
+            if (margemValidaParaMedia(item.getMargemAtual(), item.getCustoAtual(), item.getValorUnitario())) {
+                somaMargemAtual = somaMargemAtual.add(item.getMargemAtual());
+                qtdMargemAtual++;
+            }
+
+            if (margemValidaParaMedia(item.getMargemPromob(), item.getCustoPromob(), item.getValorUnitario())) {
+                somaMargemPromob = somaMargemPromob.add(item.getMargemPromob());
+                qtdMargemPromob++;
+            }
+
+            if (margemValidaParaMedia(item.getMargemAnterior(), item.getCustoAnterior(), item.getValorUnitario())) {
+                somaMargemAnterior = somaMargemAnterior.add(item.getMargemAnterior());
+                qtdMargemAnterior++;
+            }
+        }
+
+        linhaRodapeTabela.setCodigo(CODIGO_LINHA_RODAPE_TABELA);
+        linhaRodapeTabela.setDescricao("TOTAL");
+
+        linhaRodapeTabela.setQuantidade(quantidadeTotal);
+        linhaRodapeTabela.setValorTotal(valorTotalProposta);
+
+        linhaRodapeTabela.setMargemAtual(calcularMediaOuZero(somaMargemAtual, qtdMargemAtual));
+        linhaRodapeTabela.setMargemPromob(calcularMediaOuZero(somaMargemPromob, qtdMargemPromob));
+        linhaRodapeTabela.setMargemAnterior(calcularMediaOuZero(somaMargemAnterior, qtdMargemAnterior));
+
+        garantirRodapeNoFinal();
+    }
+
+    private boolean margemValidaParaMedia(BigDecimal margem, BigDecimal custo, BigDecimal valorUnitario) {
+        return margem != null
+                && valorSeguro(custo).compareTo(BigDecimal.ZERO) > 0
+                && valorSeguro(valorUnitario).compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    private BigDecimal calcularMediaOuZero(BigDecimal soma, int quantidade) {
+        if (quantidade <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return soma.divide(BigDecimal.valueOf(quantidade), 2, RoundingMode.HALF_UP);
     }
 
     private void prepararDadosIniciais() {
@@ -104,13 +243,13 @@ public class telaInicial extends Application {
         estadoCombo.valueProperty().addListener((obs, oldValue, newValue) -> atualizarBaseEstado());
         atualizarBaseEstado();
 
-        for (int i = 0; i < 18; i++) {
-            ItemAnalise item = new ItemAnalise();
-            if (i < 3) {
-                item.setCodigo("MMR0000.0000");
-            }
-            itens.add(item);
+        for (int i = 0; i < 5; i++) {
+            itens.add(new ItemAnalise());
         }
+
+        linhaRodapeTabela.setCodigo(CODIGO_LINHA_RODAPE_TABELA);
+        linhaRodapeTabela.setDescricao("TOTAL");
+        itens.add(linhaRodapeTabela);
 
         recalcularResumo();
     }
@@ -130,6 +269,102 @@ public class telaInicial extends Application {
         return icone;
     }
     
+    private void atualizarDados() {
+        mostrarOverlayAtualizacao(true);
+        long inicioAtualizacaoMs = System.currentTimeMillis();
+        long tempoMinimoExibicaoMs = sortearTempoMinimoAtualizacaoMs();
+        
+
+        List<Integer> indices = new ArrayList<>();
+        List<String> codigos = new ArrayList<>();
+
+        for (int i = 0; i < itens.size(); i++) {
+            ItemAnalise item = itens.get(i);
+
+            if (isLinhaRodapeTabela(item)) {
+                continue;
+            }
+
+            if (!temCodigoPreenchido(item)) {
+                continue;
+            }
+
+            indices.add(i);
+            codigos.add(item.getCodigo());
+        }
+
+        Task<List<AtualizacaoLinha>> tarefa = new Task<>() {
+            @Override
+            protected List<AtualizacaoLinha> call() throws Exception {
+                itemService.recarregarBases();
+
+                List<AtualizacaoLinha> atualizacoes = new ArrayList<>();
+
+                for (int i = 0; i < codigos.size(); i++) {
+                    String codigo = codigos.get(i);
+                    int indiceLinha = indices.get(i);
+
+                    DadosItem dadosItem = itemService.buscarPorCodigo(codigo).orElse(null);
+                    atualizacoes.add(new AtualizacaoLinha(indiceLinha, dadosItem));
+                }
+
+                aguardarTempoMinimo(inicioAtualizacaoMs, tempoMinimoExibicaoMs);
+
+                return atualizacoes;
+            }
+        };
+
+        tarefa.setOnSucceeded(event -> {
+            List<AtualizacaoLinha> atualizacoes = tarefa.getValue();
+
+            for (AtualizacaoLinha atualizacao : atualizacoes) {
+                int indice = atualizacao.indiceLinha();
+
+                if (indice < 0 || indice >= itens.size()) {
+                    continue;
+                }
+
+                ItemAnalise item = itens.get(indice);
+
+                if (isLinhaRodapeTabela(item)) {
+                    continue;
+                }
+
+                item.aplicarDadosItem(atualizacao.dadosItem());
+                analiseService.recalcular(item);
+            }
+
+            recalcularResumo();
+            tabela.refresh();
+            mostrarOverlayAtualizacao(false);
+
+            mostrarAviso(
+                    "Atualização concluída",
+                    "As bases foram recarregadas e os itens da tabela foram atualizados."
+            );
+        });
+
+        tarefa.setOnFailed(event -> {
+            mostrarOverlayAtualizacao(false);
+
+            Throwable erro = tarefa.getException();
+
+            mostrarAviso(
+                    "Erro na atualização",
+                    erro == null
+                            ? "Não foi possível atualizar os dados."
+                            : "Não foi possível atualizar os dados:\n" + erro.getMessage()
+            );
+
+            if (erro != null) {
+                erro.printStackTrace();
+            }
+        });
+
+        Thread thread = new Thread(tarefa, "AtualizacaoDadosThread");
+        thread.setDaemon(true);
+        thread.start();
+    }
     private VBox criarTopo() {
         VBox topo = new VBox();
         topo.getStyleClass().add("topo");
@@ -176,7 +411,7 @@ public class telaInicial extends Application {
         atualizarButton.setContentDisplay(ContentDisplay.LEFT);
         atualizarButton.setGraphicTextGap(4);
         atualizarButton.getStyleClass().add("botao-acao");
-        atualizarButton.setOnAction(event -> mostrarAviso("Atualização", "A integração com as bases reais será adicionada depois. Por enquanto, o sistema usa uma base simulada."));
+        atualizarButton.setOnAction(event -> atualizarDados());
         
         MiniTabelaEstadoBase estadoBaseTabela = new MiniTabelaEstadoBase(estadoCombo, baseEstadoLabel);
 
@@ -194,8 +429,10 @@ public class telaInicial extends Application {
                 totalPropostaLabel,
                 totalComIpiLabel,
                 resultadoAtualLabel,
-                resultadoAnteriorLabel
-        );
+                resultadoAtualComIpiLabel,
+                resultadoAnteriorLabel,
+                resultadoAnteriorComIpiLabel
+        		);
 
         comandos.getChildren().addAll(atualizarButton, estadoBaseTabela, valorPadraoButton, spacer, resumo);
 
@@ -205,12 +442,16 @@ public class telaInicial extends Application {
     
     
 
+
+    
     private TableView<ItemAnalise> criarTabela() {
         tabela = new TableView<>(itens);
         tabela.setEditable(true);
         tabela.getStyleClass().add("tabela-analise");
         tabela.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-
+        tabela.setFixedCellSize(ALTURA_LINHA_TABELA);
+        
+        
         TableColumn<ItemAnalise, String> codigoCol = new TableColumn<>("CÓDIGO");
         codigoCol.setCellValueFactory(data -> data.getValue().codigoProperty());
         codigoCol.setCellFactory(col -> new CodigoComBotaoCell());
@@ -222,31 +463,17 @@ public class telaInicial extends Application {
 
         TableColumn<ItemAnalise, Integer> quantidadeCol = new TableColumn<>("QUANTIDADE");
         quantidadeCol.setCellValueFactory(data -> data.getValue().quantidadeProperty().asObject());
-        quantidadeCol.setCellFactory(TextFieldTableCell.forTableColumn(new InteiroConverter()));
-        quantidadeCol.setOnEditCommit(event -> {
-            ItemAnalise item = event.getRowValue();
-            item.setQuantidade(event.getNewValue());
-            analiseService.recalcular(item);
-            recalcularResumo();
-            tabela.refresh();
-        });
+        quantidadeCol.setCellFactory(col -> new QuantidadeEditavelCell());
         quantidadeCol.setPrefWidth(105);
 
         TableColumn<ItemAnalise, BigDecimal> valorUnitarioCol = new TableColumn<>("VALOR UNITÁRIO");
         valorUnitarioCol.setCellValueFactory(data -> data.getValue().valorUnitarioProperty());
-        valorUnitarioCol.setCellFactory(TextFieldTableCell.forTableColumn(new MoedaEditavelConverter()));
-        valorUnitarioCol.setOnEditCommit(event -> {
-            ItemAnalise item = event.getRowValue();
-            item.setValorUnitario(event.getNewValue());
-            analiseService.recalcular(item);
-            recalcularResumo();
-            tabela.refresh();
-        });
+        valorUnitarioCol.setCellFactory(col -> new ValorUnitarioEditavelCell());
         valorUnitarioCol.setPrefWidth(125);
 
         TableColumn<ItemAnalise, BigDecimal> valorTotalCol = new TableColumn<>("VALOR TOTAL");
         valorTotalCol.setCellValueFactory(data -> data.getValue().valorTotalProperty());
-        valorTotalCol.setCellFactory(col -> new BigDecimalTableCell(true));
+        valorTotalCol.setCellFactory(col -> new BigDecimalTableCell(true, true));
         valorTotalCol.setPrefWidth(125);
 
         TableColumn<ItemAnalise, BigDecimal> variacaoAtualCol = new TableColumn<>("VARIAÇÃO ATUAL");
@@ -265,7 +492,7 @@ public class telaInicial extends Application {
         custoAtualCol.setCellValueFactory(data ->
         new ReadOnlyObjectWrapper<>(data.getValue().getCustoAtual())
 );
-        custoAtualCol.setCellFactory(col -> new BigDecimalTableCell(true));
+        custoAtualCol.setCellFactory(col -> new CustoTableCell());
         custoAtualCol.getStyleClass().add("coluna-vermelha");
         custoAtualCol.setPrefWidth(105);
         
@@ -286,7 +513,7 @@ public class telaInicial extends Application {
         custoPromobCol.setCellValueFactory(data ->
         new ReadOnlyObjectWrapper<>(data.getValue().getCustoPromob())
 );
-        custoPromobCol.setCellFactory(col -> new BigDecimalTableCell(true));
+        custoPromobCol.setCellFactory(col -> new CustoTableCell());
         custoPromobCol.getStyleClass().add("coluna-laranja");
         custoPromobCol.setPrefWidth(105);
         
@@ -313,7 +540,7 @@ public class telaInicial extends Application {
         custoAnteriorCol.setCellValueFactory(data ->
         new ReadOnlyObjectWrapper<>(data.getValue().getCustoAnterior())
 );
-        custoAnteriorCol.setCellFactory(col -> new BigDecimalTableCell(true));
+        custoAnteriorCol.setCellFactory(col -> new CustoTableCell());
         custoAnteriorCol.getStyleClass().add("coluna-azul");
         custoAnteriorCol.setPrefWidth(105);
         
@@ -362,11 +589,23 @@ public class telaInicial extends Application {
 
         tabela.setRowFactory(tv -> {
             TableRow<ItemAnalise> row = new TableRow<>();
+
+            row.itemProperty().addListener((obs, itemAntigo, itemNovo) -> {
+                row.getStyleClass().remove("linha-rodape-tabela");
+
+                if (isLinhaRodapeTabela(itemNovo)) {
+                    row.getStyleClass().add("linha-rodape-tabela");
+                }
+            });
+
             row.setOnKeyPressed(event -> {
-                if (event.getCode() == KeyCode.ENTER && !row.isEmpty()) {
+                if (event.getCode() == KeyCode.ENTER
+                        && !row.isEmpty()
+                        && !isLinhaRodapeTabela(row.getItem())) {
                     buscarDadosDoItem(row.getItem());
                 }
             });
+
             return row;
         });
 
@@ -387,16 +626,25 @@ public class telaInicial extends Application {
 
         Button adicionarLinha = new Button("+ Adicionar linha");
         adicionarLinha.getStyleClass().add("botao-acao");
-        adicionarLinha.setOnAction(event -> itens.add(new ItemAnalise()));
+        adicionarLinha.setOnAction(event -> adicionarLinhaVazia());
 
         Button removerLinha = new Button("- Remover linha");
         removerLinha.getStyleClass().add("botao-acao");
-        removerLinha.disableProperty().bind(Bindings.isEmpty(tabela.getSelectionModel().getSelectedItems()));
+        removerLinha.disableProperty().bind(
+                Bindings.createBooleanBinding(
+                        () -> tabela == null
+                                || tabela.getSelectionModel().getSelectedItem() == null
+                                || isLinhaRodapeTabela(tabela.getSelectionModel().getSelectedItem()),
+                        tabela.getSelectionModel().selectedItemProperty()
+                )
+        );
         removerLinha.setOnAction(event -> {
             ItemAnalise selecionado = tabela.getSelectionModel().getSelectedItem();
-            if (selecionado != null) {
+
+            if (selecionado != null && !isLinhaRodapeTabela(selecionado)) {
                 itens.remove(selecionado);
                 recalcularResumo();
+                tabela.refresh();
             }
         });
 
@@ -405,7 +653,7 @@ public class telaInicial extends Application {
     }
 
     private void buscarDadosDoItem(ItemAnalise item) {
-        if (item == null) {
+        if (item == null || isLinhaRodapeTabela(item)) {
             return;
         }
 
@@ -414,12 +662,18 @@ public class telaInicial extends Application {
         recalcularResumo();
         tabela.refresh();
     }
+    
+    private record AtualizacaoLinha(int indiceLinha, DadosItem dadosItem) {
+    }
 
     private void aplicarValorPadrao() {
         int itensAtualizados = 0;
         int itensSemPrecoPadrao = 0;
 
         for (ItemAnalise item : itens) {
+        	if (isLinhaRodapeTabela(item)) {
+        	    continue;
+        	}
             if (!temCodigoPreenchido(item)) {
                 continue;
             }
@@ -480,29 +734,51 @@ public class telaInicial extends Application {
     }
 
     private void recalcularResumo() {
-        BigDecimal totalProposta = BigDecimal.ZERO;
-        BigDecimal resultadoAtual = BigDecimal.ZERO;
-        BigDecimal resultadoAnterior = BigDecimal.ZERO;
+    BigDecimal totalProposta = BigDecimal.ZERO;
+    BigDecimal totalIpiProposta = BigDecimal.ZERO;
 
-        for (ItemAnalise item : itens) {
-            BigDecimal total = valorSeguro(item.getValorTotal());
-            totalProposta = totalProposta.add(total);
+    BigDecimal resultadoAtual = BigDecimal.ZERO;
+    BigDecimal totalIpiAtual = BigDecimal.ZERO;
 
-            BigDecimal custoAtualLinha = valorSeguro(item.getCustoAtual()).multiply(BigDecimal.valueOf(item.getQuantidade()));
-            BigDecimal custoAnteriorLinha = valorSeguro(item.getCustoAnterior()).multiply(BigDecimal.valueOf(item.getQuantidade()));
+    BigDecimal resultadoAnterior = BigDecimal.ZERO;
+    BigDecimal totalIpiAnterior = BigDecimal.ZERO;
 
-            resultadoAtual = resultadoAtual.add(total.subtract(custoAtualLinha));
-            resultadoAnterior = resultadoAnterior.add(total.subtract(custoAnteriorLinha));
+    for (ItemAnalise item : itens) {
+        if (isLinhaRodapeTabela(item)) {
+            continue;
         }
 
-        BigDecimal ipiDemonstrativo = new BigDecimal("0.00");
-        BigDecimal totalComIpi = totalProposta.multiply(BigDecimal.ONE.add(ipiDemonstrativo.divide(new BigDecimal("100"), 8, RoundingMode.HALF_UP)));
+        if (!temCodigoPreenchido(item)) {
+            continue;
+        }
 
-        totalPropostaLabel.setText(formatarMoeda(totalProposta));
-        totalComIpiLabel.setText(formatarMoeda(totalComIpi));
-        resultadoAtualLabel.setText(formatarMoeda(resultadoAtual));
-        resultadoAnteriorLabel.setText(formatarMoeda(resultadoAnterior));
+        BigDecimal valorTotal = valorSeguro(item.getValorTotal());
+        BigDecimal quantidade = BigDecimal.valueOf(item.getQuantidade());
+
+        BigDecimal custoAtualLinha = valorSeguro(item.getCustoAtual()).multiply(quantidade);
+        BigDecimal custoAnteriorLinha = valorSeguro(item.getCustoAnterior()).multiply(quantidade);
+
+        totalProposta = totalProposta.add(valorTotal);
+        totalIpiProposta = totalIpiProposta.add(valorSeguro(item.getIpiProposta()));
+
+        resultadoAtual = resultadoAtual.add(valorTotal.subtract(custoAtualLinha));
+        totalIpiAtual = totalIpiAtual.add(valorSeguro(item.getIpiAtual()));
+
+        resultadoAnterior = resultadoAnterior.add(valorTotal.subtract(custoAnteriorLinha));
+        totalIpiAnterior = totalIpiAnterior.add(valorSeguro(item.getIpiAnterior()));
     }
+
+    totalPropostaLabel.setText(formatarMoeda(totalProposta));
+    totalComIpiLabel.setText(formatarMoeda(totalProposta.add(totalIpiProposta)));
+
+    resultadoAtualLabel.setText(formatarMoeda(resultadoAtual));
+    resultadoAtualComIpiLabel.setText(formatarMoeda(resultadoAtual.add(totalIpiAtual)));
+
+    resultadoAnteriorLabel.setText(formatarMoeda(resultadoAnterior));
+    resultadoAnteriorComIpiLabel.setText(formatarMoeda(resultadoAnterior.add(totalIpiAnterior)));
+
+    atualizarLinhaRodapeTabela();
+}
 
     private void mostrarAviso(String titulo, String mensagem) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -528,6 +804,457 @@ public class telaInicial extends Application {
         return valor.setScale(2, RoundingMode.HALF_UP).toString().replace('.', ',') + "%";
     }
 
+    private class QuantidadeEditavelCell extends TableCell<ItemAnalise, Integer> {
+        private final TextField campo = new TextField();
+
+        public QuantidadeEditavelCell() {
+            campo.getStyleClass().add("campo-codigo-tabela");
+            campo.setAlignment(Pos.CENTER);
+            campo.setMaxWidth(Double.MAX_VALUE);
+
+            campo.setOnAction(event -> confirmarValor());
+
+            campo.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                if (event.isShortcutDown() && event.getCode() == KeyCode.V) {
+                    Clipboard clipboard = Clipboard.getSystemClipboard();
+
+                    if (!clipboard.hasString()) {
+                        return;
+                    }
+
+                    String textoColado = clipboard.getString();
+
+                    if (!textoTemMultiplasCelulas(textoColado)) {
+                        return;
+                    }
+
+                    colarQuantidadesEmLote(textoColado, getIndex());
+                    event.consume();
+                }
+            });
+        }
+
+        @Override
+        protected void updateItem(Integer valor, boolean empty) {
+            super.updateItem(valor, empty);
+
+            if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                setGraphic(null);
+                setText(null);
+                return;
+            }
+            
+            if (isLinhaRodapeTabela(getTableRow().getItem())) {
+                setGraphic(null);
+                setText(valor == null ? "" : valor.toString());
+                setAlignment(Pos.CENTER);
+                return;
+            }
+
+            campo.setText(valor == null || valor == 0 ? "" : valor.toString());
+            setText(null);
+            setGraphic(campo);
+        }
+
+        private void confirmarValor() {
+            ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+
+            if (item == null) {
+                return;
+            }
+
+            int novaQuantidade = converterQuantidade(campo.getText());
+
+            if (novaQuantidade != item.getQuantidade()) {
+                item.setQuantidade(novaQuantidade);
+                analiseService.recalcular(item);
+                recalcularResumo();
+                tabela.refresh();
+            }
+        }
+
+        private int converterQuantidade(String texto) {
+            if (texto == null || texto.trim().isEmpty()) {
+                return 0;
+            }
+
+            try {
+                return Integer.parseInt(texto.trim());
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
+    }
+    
+    private class ValorUnitarioEditavelCell extends TableCell<ItemAnalise, BigDecimal> {
+        private final TextField campo = new TextField();
+
+        public ValorUnitarioEditavelCell() {
+            campo.getStyleClass().add("campo-codigo-tabela");
+            campo.setAlignment(Pos.CENTER_RIGHT);
+            campo.setMaxWidth(Double.MAX_VALUE);
+
+            campo.setOnAction(event -> confirmarValor());
+
+            campo.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                if (event.isShortcutDown() && event.getCode() == KeyCode.V) {
+                    Clipboard clipboard = Clipboard.getSystemClipboard();
+
+                    if (!clipboard.hasString()) {
+                        return;
+                    }
+
+                    String textoColado = clipboard.getString();
+
+                    if (!textoTemMultiplasCelulas(textoColado)) {
+                        return;
+                    }
+
+                    colarValoresUnitariosEmLote(textoColado, getIndex());
+                    event.consume();
+                }
+            });
+        }
+
+        @Override
+        protected void updateItem(BigDecimal valor, boolean empty) {
+            super.updateItem(valor, empty);
+
+            if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                setGraphic(null);
+                setText(null);
+                return;
+            }
+            
+            if (isLinhaRodapeTabela(getTableRow().getItem())) {
+                setGraphic(null);
+                setText("");
+                return;
+            }
+
+            campo.setText(formatarValorEditavel(valor));
+            setText(null);
+            setGraphic(campo);
+        }
+
+        private void confirmarValor() {
+            ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+
+            if (item == null) {
+                return;
+            }
+
+            BigDecimal novoValor = converterValor(campo.getText());
+
+            if (novoValor.compareTo(item.getValorUnitario()) != 0) {
+                item.setValorUnitario(novoValor);
+                analiseService.recalcular(item);
+                recalcularResumo();
+                tabela.refresh();
+            }
+        }
+
+        private String formatarValorEditavel(BigDecimal valor) {
+            if (valor == null || valor.compareTo(BigDecimal.ZERO) == 0) {
+                return "";
+            }
+
+            return valor.setScale(2, RoundingMode.HALF_UP)
+                    .toString()
+                    .replace(".", ",");
+        }
+
+        private BigDecimal converterValor(String texto) {
+            if (texto == null || texto.trim().isEmpty()) {
+                return BigDecimal.ZERO;
+            }
+
+            try {
+                return new BigDecimal(
+                        texto.trim()
+                                .replace("R$", "")
+                                .replace(".", "")
+                                .replace(",", ".")
+                );
+            } catch (NumberFormatException e) {
+                return BigDecimal.ZERO;
+            }
+        }
+    }
+    
+    private boolean textoTemMultiplasCelulas(String texto) {
+        if (texto == null) {
+            return false;
+        }
+
+        return texto.contains("\n")
+                || texto.contains("\r")
+                || texto.contains("\t");
+    }
+
+    private void colarQuantidadesEmLote(String textoColado, int indiceInicial) {
+        List<String> valores = extrairPrimeiraColunaColada(textoColado);
+
+        if (valores.isEmpty()) {
+            return;
+        }
+
+        int indiceLinha = Math.max(indiceInicial, 0);
+
+        for (String valorTexto : valores) {
+            garantirLinhaExistente(indiceLinha);
+
+            ItemAnalise item = itens.get(indiceLinha);
+            item.setQuantidade(converterQuantidadeColada(valorTexto));
+
+            analiseService.recalcular(item);
+
+            indiceLinha++;
+        }
+
+        recalcularResumo();
+        tabela.refresh();
+    }
+
+    private void colarValoresUnitariosEmLote(String textoColado, int indiceInicial) {
+        List<String> valores = extrairPrimeiraColunaColada(textoColado);
+
+        if (valores.isEmpty()) {
+            return;
+        }
+
+        int indiceLinha = Math.max(indiceInicial, 0);
+
+        for (String valorTexto : valores) {
+            garantirLinhaExistente(indiceLinha);
+
+            ItemAnalise item = itens.get(indiceLinha);
+            item.setValorUnitario(converterMoedaColada(valorTexto));
+
+            analiseService.recalcular(item);
+
+            indiceLinha++;
+        }
+
+        recalcularResumo();
+        tabela.refresh();
+    }
+
+    private List<String> extrairPrimeiraColunaColada(String textoColado) {
+        List<String> valores = new ArrayList<>();
+
+        if (textoColado == null || textoColado.isBlank()) {
+            return valores;
+        }
+
+        String textoNormalizado = textoColado
+                .replace("\r\n", "\n")
+                .replace("\r", "\n");
+
+        String[] linhas = textoNormalizado.split("\n");
+
+        for (String linha : linhas) {
+            if (linha == null || linha.isBlank()) {
+                continue;
+            }
+
+            String[] celulas = linha.split("\t");
+
+            if (celulas.length == 0) {
+                continue;
+            }
+
+            String valor = celulas[0] == null ? "" : celulas[0].trim();
+
+            if (!valor.isEmpty()) {
+                valores.add(valor);
+            }
+        }
+
+        return valores;
+    }
+
+    private int converterQuantidadeColada(String texto) {
+        if (texto == null || texto.trim().isEmpty()) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(texto.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private BigDecimal converterMoedaColada(String texto) {
+        if (texto == null || texto.trim().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        try {
+            return new BigDecimal(
+                    texto.trim()
+                            .replace("R$", "")
+                            .replace(".", "")
+                            .replace(",", ".")
+            );
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
+    }
+    
+    private void colarCodigosEmLote(String textoColado, int indiceInicial) {
+        List<String> codigos = extrairCodigosColados(textoColado);
+
+        if (codigos.isEmpty()) {
+            return;
+        }
+
+        int indiceLinha = Math.max(indiceInicial, 0);
+
+        for (String codigo : codigos) {
+            garantirLinhaExistente(indiceLinha);
+
+            ItemAnalise item = itens.get(indiceLinha);
+            item.setCodigo(codigo);
+
+            item.aplicarDadosItem(itemService.buscarPorCodigo(codigo).orElse(null));
+            analiseService.recalcular(item);
+
+            indiceLinha++;
+        }
+
+        recalcularResumo();
+        tabela.refresh();
+    }
+
+    private List<String> extrairCodigosColados(String textoColado) {
+        List<String> codigos = new ArrayList<>();
+
+        if (textoColado == null || textoColado.isBlank()) {
+            return codigos;
+        }
+
+        String textoNormalizado = textoColado
+                .replace("\r\n", "\n")
+                .replace("\r", "\n");
+
+        String[] linhas = textoNormalizado.split("\n");
+
+        for (String linha : linhas) {
+            if (linha == null || linha.isBlank()) {
+                continue;
+            }
+
+            String[] celulas = linha.split("\t");
+
+            for (String celula : celulas) {
+                String codigo = celula == null ? "" : celula.trim();
+
+                if (!codigo.isEmpty()) {
+                    codigos.add(codigo.toUpperCase());
+                    break;
+                }
+            }
+        }
+
+        return codigos;
+    }
+
+    private void garantirLinhaExistente(int indice) {
+        int indiceRodape = itens.indexOf(linhaRodapeTabela);
+
+        if (indiceRodape < 0) {
+            itens.add(linhaRodapeTabela);
+            indiceRodape = itens.indexOf(linhaRodapeTabela);
+        }
+
+        while (itens.size() <= indice || indice >= indiceRodape) {
+            itens.add(indiceRodape, new ItemAnalise());
+            indiceRodape++;
+        }
+    }
+    
+    private StackPane criarOverlayAtualizacao() {
+        overlayAtualizacao = new StackPane();
+        overlayAtualizacao.setVisible(false);
+        overlayAtualizacao.setMouseTransparent(true);
+        overlayAtualizacao.setStyle("-fx-background-color: rgba(0, 0, 0, 0.35);");
+
+        VBox caixa = new VBox(12);
+        caixa.setAlignment(Pos.CENTER);
+        caixa.setPadding(new Insets(22));
+        caixa.setMaxWidth(320);
+        caixa.setMaxHeight(150);
+        caixa.setStyle(
+                "-fx-background-color: #eeeeee;" +
+                "-fx-border-color: #555555;" +
+                "-fx-border-width: 2;" +
+                "-fx-background-radius: 6;" +
+                "-fx-border-radius: 6;"
+        );
+
+        ProgressIndicator progresso = new ProgressIndicator();
+        progresso.setPrefSize(42, 42);
+
+        Label texto = new Label("Atualizando dados...");
+        texto.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #111111;");
+
+        Label subtexto = new Label("Aguarde enquanto as bases são recarregadas.");
+        subtexto.setStyle("-fx-font-size: 12px; -fx-text-fill: #333333;");
+
+        caixa.getChildren().addAll(progresso, texto, subtexto);
+        overlayAtualizacao.getChildren().add(caixa);
+
+        return overlayAtualizacao;
+    }
+
+    private void preCarregarBasesAoIniciar() {
+        mostrarOverlayAtualizacao(true);
+
+        Task<Void> tarefa = new Task<>() {
+            @Override
+            protected Void call() {
+                itemService.preCarregarBases();
+                return null;
+            }
+        };
+
+        tarefa.setOnSucceeded(event -> {
+            mostrarOverlayAtualizacao(false);
+        });
+
+        tarefa.setOnFailed(event -> {
+            mostrarOverlayAtualizacao(false);
+
+            Throwable erro = tarefa.getException();
+
+            mostrarAviso(
+                    "Erro ao carregar bases",
+                    erro == null
+                            ? "Não foi possível carregar as bases ao iniciar o programa."
+                            : "Não foi possível carregar as bases ao iniciar o programa:\n" + erro.getMessage()
+            );
+
+            if (erro != null) {
+                erro.printStackTrace();
+            }
+        });
+
+        Thread thread = new Thread(tarefa, "PreCarregamentoBasesThread");
+        thread.setDaemon(true);
+        thread.start();
+    }
+    
+    private void mostrarOverlayAtualizacao(boolean mostrar) {
+        if (overlayAtualizacao == null) {
+            return;
+        }
+
+        overlayAtualizacao.setVisible(mostrar);
+        overlayAtualizacao.setMouseTransparent(!mostrar);
+    }
+    
     private class CodigoComBotaoCell extends TableCell<ItemAnalise, String> {
         private final TextField campoCodigo = new TextField();
         private final Button botaoOpcoes = new Button();
@@ -551,6 +1278,25 @@ public class telaInicial extends Application {
             container.getChildren().addAll(campoCodigo, botaoOpcoes);
 
             campoCodigo.setOnAction(event -> confirmarCodigo());
+            
+            campoCodigo.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                if (event.isShortcutDown() && event.getCode() == KeyCode.V) {
+                    Clipboard clipboard = Clipboard.getSystemClipboard();
+
+                    if (!clipboard.hasString()) {
+                        return;
+                    }
+
+                    String textoColado = clipboard.getString();
+
+                    if (!textoTemMultiplasCelulas(textoColado)) {
+                        return;
+                    }
+
+                    colarCodigosEmLote(textoColado, getIndex());
+                    event.consume();
+                }
+            });
 
             campoCodigo.focusedProperty().addListener((obs, estavaFocado, estaFocado) -> {
                 if (!estaFocado) {
@@ -577,6 +1323,12 @@ public class telaInicial extends Application {
             if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                 setGraphic(null);
                 setText(null);
+                return;
+            }
+            
+            if (isLinhaRodapeTabela(getTableRow().getItem())) {
+                setGraphic(null);
+                setText("");
                 return;
             }
 
@@ -641,12 +1393,38 @@ public class telaInicial extends Application {
             }
         }
     }
+    
+    
+    private double calcularAlturaTabela(BorderPane root, VBox topo, HBox rodape) {
+        int quantidadeLinhas = Math.max(itens.size(), 1);
 
-    private static class BigDecimalTableCell extends TableCell<ItemAnalise, BigDecimal> {
+        double alturaDesejada = ALTURA_CABECALHO_TABELA
+                + quantidadeLinhas * ALTURA_LINHA_TABELA
+                + ALTURA_BARRA_HORIZONTAL;
+
+        double alturaDisponivel = root.getHeight()
+                - topo.getHeight()
+                - rodape.getHeight()
+                - MARGEM_SEGURANCA_TABELA;
+
+        if (alturaDisponivel <= 0) {
+            return alturaDesejada;
+        }
+
+        return Math.min(alturaDesejada, alturaDisponivel);
+    }
+    
+    private class BigDecimalTableCell extends TableCell<ItemAnalise, BigDecimal> {
         private final boolean moeda;
+        private final boolean exibirNoRodape;
 
         public BigDecimalTableCell(boolean moeda) {
+            this(moeda, false);
+        }
+
+        public BigDecimalTableCell(boolean moeda, boolean exibirNoRodape) {
             this.moeda = moeda;
+            this.exibirNoRodape = exibirNoRodape;
             setAlignment(Pos.CENTER_RIGHT);
         }
 
@@ -659,7 +1437,16 @@ public class telaInicial extends Application {
                 return;
             }
 
-            if (moeda && item.compareTo(BigDecimal.ZERO) == 0) {
+            ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+
+            if (isLinhaRodapeTabela(itemLinha) && !exibirNoRodape) {
+                setText("");
+                return;
+            }
+
+            if (!isLinhaRodapeTabela(itemLinha)
+                    && moeda
+                    && item.compareTo(BigDecimal.ZERO) == 0) {
                 setText("");
                 return;
             }
@@ -671,10 +1458,53 @@ public class telaInicial extends Application {
             }
         }
     }
+    
+    
+    private class CustoTableCell extends TableCell<ItemAnalise, BigDecimal> {
 
-    private static class MargemTableCell extends BigDecimalTableCell {
+        public CustoTableCell() {
+            setAlignment(Pos.CENTER_RIGHT);
+        }
+
+        @Override
+        protected void updateItem(BigDecimal valor, boolean empty) {
+            super.updateItem(valor, empty);
+
+            if (empty) {
+                setText("");
+                return;
+            }
+
+            ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+
+            if (isLinhaRodapeTabela(itemLinha)) {
+                setText("");
+                return;
+            }
+
+            if (!linhaTemCodigo(itemLinha)) {
+                setText("");
+                return;
+            }
+
+            if (valor == null || valor.compareTo(BigDecimal.ZERO) == 0) {
+                setText("S./REG.");
+                return;
+            }
+
+            setText(formatarMoeda(valor));
+        }
+
+        private boolean linhaTemCodigo(ItemAnalise item) {
+            return item != null
+                    && item.getCodigo() != null
+                    && !item.getCodigo().trim().isEmpty();
+        }
+    }
+
+    private class MargemTableCell extends BigDecimalTableCell {
         public MargemTableCell() {
-            super(false);
+            super(false, true);
         }
 
         @Override
@@ -682,7 +1512,9 @@ public class telaInicial extends Application {
             super.updateItem(item, empty);
             getStyleClass().removeAll("margem-baixa", "margem-media", "margem-boa");
 
-            if (!empty && item != null) {
+            ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+
+            if (!empty && item != null && !isLinhaRodapeTabela(itemLinha)) {
                 if (item.compareTo(new BigDecimal("20")) < 0) {
                     getStyleClass().add("margem-baixa");
                 } else if (item.compareTo(new BigDecimal("35")) < 0) {
@@ -693,8 +1525,38 @@ public class telaInicial extends Application {
             }
         }
     }
+    
+    private long sortearTempoMinimoAtualizacaoMs() {
+        int sorteio = ThreadLocalRandom.current().nextInt(100);
 
-    private static class DataTableCell extends TableCell<ItemAnalise, LocalDate> {
+        // 80% de chance: comum, entre 1 e 5 segundos
+        if (sorteio < 80) {
+            return sortearEntreMs(1_000, 5_000);
+        }
+
+        // 15% de chance: incomum, entre 5 e 10 segundos
+        if (sorteio < 95) {
+            return sortearEntreMs(5_000, 10_000);
+        }
+
+        // 5% de chance: raro, entre 10 e 15 segundos
+        return sortearEntreMs(10_000, 15_000);
+    }
+
+    private long sortearEntreMs(int minimoInclusivo, int maximoInclusivo) {
+        return ThreadLocalRandom.current().nextLong(minimoInclusivo, maximoInclusivo + 1L);
+    }
+
+    private void aguardarTempoMinimo(long inicioMs, long tempoMinimoMs) throws InterruptedException {
+        long tempoDecorrido = System.currentTimeMillis() - inicioMs;
+        long tempoRestante = tempoMinimoMs - tempoDecorrido;
+
+        if (tempoRestante > 0) {
+            Thread.sleep(tempoRestante);
+        }
+    }
+    
+    private class DataTableCell extends TableCell<ItemAnalise, LocalDate> {
         private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
         public DataTableCell() {
@@ -702,13 +1564,38 @@ public class telaInicial extends Application {
         }
 
         @Override
-        protected void updateItem(LocalDate item, boolean empty) {
-            super.updateItem(item, empty);
-            if (empty || item == null) {
-                setText("");
-            } else {
-                setText(formatter.format(item));
-            }
+protected void updateItem(LocalDate data, boolean empty) {
+    super.updateItem(data, empty);
+
+    if (empty) {
+        setText("");
+        return;
+    }
+
+    ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+
+    if (isLinhaRodapeTabela(itemLinha)) {
+        setText("");
+        return;
+    }
+
+    if (!linhaTemCodigo(itemLinha)) {
+        setText("");
+        return;
+    }
+
+    if (data == null) {
+        setText("S./REG.");
+        return;
+    }
+
+    setText(formatter.format(data));
+}
+
+        private boolean linhaTemCodigo(ItemAnalise item) {
+            return item != null
+                    && item.getCodigo() != null
+                    && !item.getCodigo().trim().isEmpty();
         }
     }
 }
