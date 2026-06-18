@@ -19,15 +19,11 @@ public class CodigoComBotaoCell extends TableCell<ItemAnalise, String> {
     private final HBox container = new HBox(4);
 
     private final Consumer<ItemAnalise> aoConfirmarCodigo;
-    private final Consumer<ItemAnalise> aoClicarBotao;
-
     public CodigoComBotaoCell(
             Consumer<ItemAnalise> aoConfirmarCodigo,
             Consumer<ItemAnalise> aoClicarBotao
     ) {
         this.aoConfirmarCodigo = aoConfirmarCodigo;
-        this.aoClicarBotao = aoClicarBotao;
-
         campoCodigo.getStyleClass().add("campo-codigo-tabela");
         campoCodigo.setMaxWidth(Double.MAX_VALUE);
         campoCodigo.setAlignment(Pos.CENTER_LEFT);

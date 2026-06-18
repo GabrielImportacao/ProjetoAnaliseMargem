@@ -44,7 +44,8 @@ public class ItemRepositoryXlsb implements ItemRepository {
         return Optional.ofNullable(cacheItens.get(chave));
     }
 
-    private void carregarCacheSeNecessario() {
+    @SuppressWarnings("unchecked")
+	private void carregarCacheSeNecessario() {
         if (cacheItens != null) {
             return;
         }
@@ -162,7 +163,8 @@ public class ItemRepositoryXlsb implements ItemRepository {
         }
     }
 
-    private LocalDateTime converterDataHora(String texto) {
+    @SuppressWarnings("unused")
+	private LocalDateTime converterDataHora(String texto) {
         if (texto == null || texto.isBlank()) {
             return null;
         }

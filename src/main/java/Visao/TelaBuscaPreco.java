@@ -37,7 +37,6 @@ import java.util.function.BiConsumer;
 public class TelaBuscaPreco {
 
 	private static final String COR_FUNDO_TELA = "#C7C4BA";
-	private static final String COR_CABECALHO = "#C7C4BA";
 	private static final String COR_LINHA_PAR = "#E6E6E6";
 	private static final String COR_LINHA_IMPAR = "#D3D3D3";
 	private static final String COR_BORDA = "#555555";
@@ -228,7 +227,8 @@ public class TelaBuscaPreco {
         return botao;
     }
 
-    private TableView<LinhaBuscaPreco> criarTabela() {
+    @SuppressWarnings({ "unchecked", "deprecation" })
+	private TableView<LinhaBuscaPreco> criarTabela() {
         TableView<LinhaBuscaPreco> tabela = new TableView<>(linhas);
         tabela.setEditable(true);
         tabela.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);

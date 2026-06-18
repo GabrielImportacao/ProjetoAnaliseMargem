@@ -12,7 +12,8 @@ import java.util.Scanner;
 
 public class TesteAtualizacaoBases {
 
-    public static void main(String[] args) {
+    @SuppressWarnings("resource")
+	public static void main(String[] args) {
         ItemService itemService = new ItemService();
 
         String[] codigosTeste = {

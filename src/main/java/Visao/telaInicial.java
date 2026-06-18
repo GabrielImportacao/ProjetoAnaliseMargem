@@ -17,14 +17,10 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
-import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javafx.scene.input.Clipboard;
@@ -34,7 +30,6 @@ import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -49,8 +44,6 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.Map;
-
 import Visao.componentes.MiniTabelaEstadoBase;
 import Visao.componentes.TabelaResumo;
 
@@ -78,24 +71,6 @@ public class telaInicial extends Application {
     private final ItemAnalise linhaRodapeTabela = new ItemAnalise();
     
     private StackPane overlayAtualizacao;
-    
-    private final java.util.List<Label> labelsRodapeTabela = new java.util.ArrayList<>();
-
-    private static final int IDX_QUANTIDADE = 2;
-    private static final int IDX_VALOR_TOTAL = 4;
-    private static final int IDX_MARGEM_ATUAL = 6;
-    private static final int IDX_MARGEM_PROMOB = 9;
-    private static final int IDX_MARGEM_ANTERIOR = 13;
-    
-    private ComboBox<String> comboEstado;
-    private Label lblBaseEstado;
-
-    private final Map<String, String> basePorEstado = Map.of(
-        "SC", "40,22%",
-        "PR", "38,10%",
-        "RS", "39,05%",
-        "SP", "36,80%"
-    );
     
     private static final String COLUNA_CODIGO = "CÓDIGO";
     private static final String COLUNA_QUANTIDADE = "QUANTIDADE";
@@ -642,7 +617,8 @@ public class telaInicial extends Application {
         return false;
     }
     
-    private TableView<ItemAnalise> criarTabela() {
+    @SuppressWarnings("unchecked")
+	private TableView<ItemAnalise> criarTabela() {
         tabela = new TableView<>(itens);
         tabela.setEditable(true);
         tabela.getStyleClass().add("tabela-analise");
@@ -960,64 +936,10 @@ public class telaInicial extends Application {
             "-fx-font-weight: bold;";
 }
     
-    private void aplicarValorPadrao() {
-        int itensAtualizados = 0;
-        int itensSemPrecoPadrao = 0;
-
-        for (ItemAnalise item : itens) {
-        	if (isLinhaRodapeTabela(item)) {
-        	    continue;
-        	}
-            if (!temCodigoPreenchido(item)) {
-                continue;
-            }
-
-            if (!valorUnitarioEstaVazio(item)) {
-                continue;
-            }
-
-            Optional<BigDecimal> precoPadrao =
-                    itemService.buscarPrecoPadraoVendaPorCodigo(item.getCodigo());
-
-            if (precoPadrao.isEmpty()) {
-                itensSemPrecoPadrao++;
-                continue;
-            }
-
-            item.setValorUnitario(precoPadrao.get());
-
-            // Garante que os demais dados do item estejam carregados antes de recalcular.
-            if (item.getDescricao() == null || item.getDescricao().isBlank()) {
-                item.aplicarDadosItem(itemService.buscarPorCodigo(item.getCodigo()).orElse(null));
-            }
-
-            recalcularItem(item);
-            itensAtualizados++;
-        }
-
-        recalcularResumo();
-        tabela.refresh();
-
-        if (itensAtualizados == 0) {
-            mostrarAviso(
-                    "Valor padrão",
-                    "Nenhum item foi atualizado. Verifique se existem itens com código preenchido, valor unitário vazio e preço líquido cadastrado na base de itens."
-            );
-        }
-    }
-    
     private boolean temCodigoPreenchido(ItemAnalise item) {
         return item != null
                 && item.getCodigo() != null
                 && !item.getCodigo().trim().isEmpty();
-    }
-
-    private boolean valorUnitarioEstaVazio(ItemAnalise item) {
-        if (item == null || item.getValorUnitario() == null) {
-            return true;
-        }
-
-        return item.getValorUnitario().compareTo(BigDecimal.ZERO) == 0;
     }
 
     private void atualizarBaseEstado() {
@@ -1087,7 +1009,8 @@ public class telaInicial extends Application {
     }
 
     private static String formatarMoeda(BigDecimal valor) {
-        NumberFormat format = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
+        @SuppressWarnings("deprecation")
+		NumberFormat format = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
         return format.format(valor == null ? BigDecimal.ZERO : valor);
     }
 
@@ -1801,48 +1724,6 @@ public class telaInicial extends Application {
     tabela.refresh();
 }
     
-    private static class InteiroConverter extends StringConverter<Integer> {
-        @Override
-        public String toString(Integer value) {
-            return value == null || value == 0 ? "" : value.toString();
-        }
-
-        @Override
-        public Integer fromString(String value) {
-            if (value == null || value.trim().isEmpty()) {
-                return 0;
-            }
-            try {
-                return Integer.parseInt(value.trim());
-            } catch (NumberFormatException e) {
-                return 0;
-            }
-        }
-    }
-
-    private static class MoedaEditavelConverter extends StringConverter<BigDecimal> {
-        @Override
-        public String toString(BigDecimal value) {
-            if (value == null || value.compareTo(BigDecimal.ZERO) == 0) {
-                return "";
-            }
-            return value.setScale(2, RoundingMode.HALF_UP).toString().replace('.', ',');
-        }
-
-        @Override
-        public BigDecimal fromString(String value) {
-            if (value == null || value.trim().isEmpty()) {
-                return BigDecimal.ZERO;
-            }
-            try {
-                return new BigDecimal(value.trim().replace("R$", "").replace(".", "").replace(',', '.'));
-            } catch (NumberFormatException e) {
-                return BigDecimal.ZERO;
-            }
-        }
-    }
-    
-    
     private double calcularAlturaTabela(BorderPane root, VBox topo, HBox rodape) {
         int quantidadeLinhas = Math.max(itens.size(), 1);
 
@@ -2054,18 +1935,6 @@ public class telaInicial extends Application {
             setAlignment(Pos.CENTER);
         }
 
-        private BigDecimal getPercentualBaseEstadoSelecionado() {
-            EstadoInfo estadoSelecionado = estadoCombo.getSelectionModel().getSelectedItem();
-
-            if (estadoSelecionado == null || estadoSelecionado.getBaseMargem() == null) {
-                return BigDecimal.ZERO;
-            }
-
-            return estadoSelecionado.getBaseMargem();
-        }
-        
-        
-        
         @Override
     protected void updateItem(LocalDate data, boolean empty) {
         super.updateItem(data, empty);

@@ -233,6 +233,7 @@ public class ConexaoPlanilhaXlsb {
         throw new IllegalArgumentException("Aba não encontrada na planilha: " + nomeAba);
     }
     
-    private static class LeituraConcluidaException extends RuntimeException {
+    @SuppressWarnings("serial")
+	private static class LeituraConcluidaException extends RuntimeException {
     }
 }
