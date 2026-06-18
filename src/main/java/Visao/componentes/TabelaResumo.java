@@ -59,7 +59,7 @@ public class TabelaResumo extends GridPane {
 
     private StackPane criarCelulaValor(Label label, int col, int row) {
         label.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        label.setAlignment(Pos.CENTER_RIGHT);
+        label.setAlignment(Pos.CENTER);
         label.setPadding(new Insets(0, 6, 0, 0));
 
         label.setStyle(

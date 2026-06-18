@@ -2,10 +2,12 @@ package Visao;
 
 import Controle.AnaliseService;
 import Controle.ItemService;
+import Modelo.CondicaoVenda;
 import Modelo.DadosItem;
 import Modelo.EstadoInfo;
 import Modelo.ItemAnalise;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
@@ -27,6 +29,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,8 +67,7 @@ public class telaInicial extends Application {
     private final Label resultadoAnteriorLabel = new Label("R$ 0,00");
     private final ComboBox<EstadoInfo> estadoCombo = new ComboBox<>();
     private final Label baseEstadoLabel = new Label("0,00%");
-    
-    
+        
     private TableView<ItemAnalise> tabela;
     private static final double ALTURA_LINHA_TABELA = 24;
     private static final double ALTURA_CABECALHO_TABELA = 42;
@@ -94,11 +97,138 @@ public class telaInicial extends Application {
         "SP", "36,80%"
     );
     
+    private static final String COLUNA_CODIGO = "CÓDIGO";
+    private static final String COLUNA_QUANTIDADE = "QUANTIDADE";
+    private static final String COLUNA_VALOR_UNITARIO = "VALOR UNITÁRIO";
+
+    private int indiceLinhaFocoPendente = -1;
+    private String colunaFocoPendente = null;
 
     public static void main(String[] args) {
         launch(args);
     }
 
+    private void tratarNavegacaoCampoEditavel(
+            KeyEvent event,
+            int indiceAtual,
+            String colunaAtual,
+            Runnable confirmarValorAtual
+    ) {
+        if (event.getCode() != KeyCode.ENTER && event.getCode() != KeyCode.TAB) {
+            return;
+        }
+
+        event.consume();
+
+        confirmarValorAtual.run();
+
+        if (event.getCode() == KeyCode.ENTER) {
+            moverFocoVertical(indiceAtual, colunaAtual, event.isShiftDown());
+            return;
+        }
+
+        moverFocoHorizontal(indiceAtual, colunaAtual, event.isShiftDown());
+    }
+
+    private void moverFocoVertical(int indiceAtual, String colunaAtual, boolean subir) {
+        int indiceDestino = subir ? indiceAtual - 1 : indiceAtual + 1;
+
+        if (indiceDestino < 0) {
+            return;
+        }
+
+        focarCelulaEditavel(indiceDestino, colunaAtual);
+    }
+
+    private void moverFocoHorizontal(int indiceAtual, String colunaAtual, boolean voltar) {
+        List<String> colunasEditaveis = obterColunasEditaveisVisiveisNaOrdem();
+
+        int posicaoAtual = colunasEditaveis.indexOf(colunaAtual);
+
+        if (posicaoAtual < 0) {
+            return;
+        }
+
+        int indiceDestino = indiceAtual;
+        int posicaoDestino = voltar ? posicaoAtual - 1 : posicaoAtual + 1;
+
+        if (posicaoDestino < 0) {
+            indiceDestino--;
+            posicaoDestino = colunasEditaveis.size() - 1;
+        } else if (posicaoDestino >= colunasEditaveis.size()) {
+            indiceDestino++;
+            posicaoDestino = 0;
+        }
+
+        if (indiceDestino < 0) {
+            return;
+        }
+
+        focarCelulaEditavel(indiceDestino, colunasEditaveis.get(posicaoDestino));
+    }
+
+    private List<String> obterColunasEditaveisVisiveisNaOrdem() {
+        List<String> colunas = new ArrayList<>();
+
+        for (TableColumn<ItemAnalise, ?> coluna : tabela.getVisibleLeafColumns()) {
+            String nome = coluna.getText();
+
+            if (COLUNA_CODIGO.equals(nome)
+                    || COLUNA_QUANTIDADE.equals(nome)
+                    || COLUNA_VALOR_UNITARIO.equals(nome)) {
+                colunas.add(nome);
+            }
+        }
+
+        return colunas;
+    }
+
+    private void focarCelulaEditavel(int indiceLinha, String coluna) {
+        if (indiceLinha < 0) {
+            return;
+        }
+
+        garantirLinhaExistente(indiceLinha);
+
+        if (indiceLinha >= itens.size()) {
+            return;
+        }
+
+        if (isLinhaRodapeTabela(itens.get(indiceLinha))) {
+            garantirLinhaExistente(indiceLinha);
+        }
+
+        indiceLinhaFocoPendente = indiceLinha;
+        colunaFocoPendente = coluna;
+
+        tabela.scrollTo(indiceLinha);
+        tabela.getSelectionModel().clearAndSelect(indiceLinha);
+        tabela.getFocusModel().focus(indiceLinha);
+        tabela.refresh();
+    }
+
+    private void focarCampoSePendente(String coluna, int indiceLinha, TextField campo) {
+        if (campo == null) {
+            return;
+        }
+
+        if (indiceLinha != indiceLinhaFocoPendente || !coluna.equals(colunaFocoPendente)) {
+            return;
+        }
+
+        Platform.runLater(() -> {
+            if (indiceLinha != indiceLinhaFocoPendente || !coluna.equals(colunaFocoPendente)) {
+                return;
+            }
+
+            campo.requestFocus();
+            campo.selectAll();
+
+            indiceLinhaFocoPendente = -1;
+            colunaFocoPendente = null;
+        });
+    }
+    
     @Override
     public void start(Stage stage) {
         prepararDadosIniciais();
@@ -119,9 +249,31 @@ public class telaInicial extends Application {
         root.setBottom(rodape);
 
         StackPane rootComOverlay = new StackPane(root, criarOverlayAtualizacao());
+        
+        rootComOverlay.setFocusTraversable(true);
 
         Scene scene = new Scene(rootComOverlay, 1180, 680);
         scene.getStylesheets().add(getClass().getResource("/estilo.css").toExternalForm());
+
+        scene.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            if (!(event.getTarget() instanceof Node alvo)) {
+                return;
+            }
+
+            boolean clicouNaTabela = cliqueFoiDentroDoNo(alvo, tabela);
+            boolean clicouNoRodape = cliqueFoiDentroDoNo(alvo, rodape);
+
+            if (!clicouNaTabela && !clicouNoRodape) {
+                tabela.getSelectionModel().clearSelection();
+
+                if (tabela.getFocusModel() != null) {
+                    tabela.getFocusModel().focus(-1);
+                }
+
+                rootComOverlay.requestFocus();
+            }
+        });
+        
 
         tabelaCriada.prefHeightProperty().bind(
                 Bindings.createDoubleBinding(
@@ -234,13 +386,46 @@ public class telaInicial extends Application {
 
     private void prepararDadosIniciais() {
         estadoCombo.setItems(FXCollections.observableArrayList(
+                new EstadoInfo("SP", new BigDecimal("50.00")),
                 new EstadoInfo("SC", new BigDecimal("40.22")),
-                new EstadoInfo("PR", new BigDecimal("39.50")),
-                new EstadoInfo("RS", new BigDecimal("38.75")),
-                new EstadoInfo("SP", new BigDecimal("36.00"))
+        		new EstadoInfo("AC", new BigDecimal("50.00")),
+                new EstadoInfo("AL", new BigDecimal("50.00")),
+                new EstadoInfo("AP", new BigDecimal("50.00")),
+                new EstadoInfo("AM", new BigDecimal("50.00")),
+                new EstadoInfo("BA", new BigDecimal("50.00")),
+                new EstadoInfo("CE", new BigDecimal("50.00")),
+                new EstadoInfo("DF", new BigDecimal("50.00")),
+                new EstadoInfo("ES", new BigDecimal("50.00")),
+                new EstadoInfo("GO", new BigDecimal("50.00")),
+                new EstadoInfo("MA", new BigDecimal("50.00")),
+                new EstadoInfo("MT", new BigDecimal("50.00")),
+                new EstadoInfo("MS", new BigDecimal("50.00")),
+                new EstadoInfo("MG", new BigDecimal("50.00")),
+                new EstadoInfo("PA", new BigDecimal("50.00")),
+                new EstadoInfo("PB", new BigDecimal("50.00")),
+                new EstadoInfo("PR", new BigDecimal("50.00")),
+                new EstadoInfo("PE", new BigDecimal("50.00")),
+                new EstadoInfo("PI", new BigDecimal("50.00")),
+                new EstadoInfo("RJ", new BigDecimal("50.00")),
+                new EstadoInfo("RN", new BigDecimal("50.00")),
+                new EstadoInfo("RS", new BigDecimal("50.00")),
+                new EstadoInfo("RO", new BigDecimal("50.00")),
+                new EstadoInfo("RR", new BigDecimal("50.00")),
+                new EstadoInfo("SE", new BigDecimal("50.00")),
+                new EstadoInfo("TO", new BigDecimal("50.00"))
         ));
-        estadoCombo.getSelectionModel().selectFirst();
-        estadoCombo.valueProperty().addListener((obs, oldValue, newValue) -> atualizarBaseEstado());
+        estadoCombo.getSelectionModel().select(
+                estadoCombo.getItems().stream()
+                        .filter(estado -> "SP".equals(estado.getSigla()))
+                        .findFirst()
+                        .orElse(estadoCombo.getItems().get(0))
+        );
+
+        estadoCombo.valueProperty().addListener((obs, oldValue, newValue) -> {
+            atualizarBaseEstado();
+            recalcularTudoAposAlterarEstado();
+        });
+        
         atualizarBaseEstado();
 
         for (int i = 0; i < 5; i++) {
@@ -331,7 +516,7 @@ public class telaInicial extends Application {
                 }
 
                 item.aplicarDadosItem(atualizacao.dadosItem());
-                analiseService.recalcular(item);
+                recalcularItem(item);
             }
 
             recalcularResumo();
@@ -420,7 +605,7 @@ public class telaInicial extends Application {
         valorPadraoButton.setContentDisplay(ContentDisplay.LEFT);
         valorPadraoButton.setGraphicTextGap(4);
         valorPadraoButton.getStyleClass().add("botao-busca");
-        valorPadraoButton.setOnAction(event -> aplicarValorPadrao());
+        valorPadraoButton.setOnAction(event -> abrirTelaBuscaPreco());
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -443,6 +628,19 @@ public class telaInicial extends Application {
     
 
 
+    private boolean cliqueFoiDentroDoNo(Node alvo, Node noPai) {
+        Node atual = alvo;
+
+        while (atual != null) {
+            if (atual == noPai) {
+                return true;
+            }
+
+            atual = atual.getParent();
+        }
+
+        return false;
+    }
     
     private TableView<ItemAnalise> criarTabela() {
         tabela = new TableView<>(itens);
@@ -459,6 +657,24 @@ public class telaInicial extends Application {
 
         TableColumn<ItemAnalise, String> descricaoCol = new TableColumn<>("DESCRIÇÃO");
         descricaoCol.setCellValueFactory(data -> data.getValue().descricaoProperty());
+        descricaoCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty) {
+                    setText("");
+                    setStyle("");
+                    return;
+                }
+
+                setText(item == null ? "" : item);
+                setAlignment(Pos.CENTER_LEFT);
+
+                ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+                aplicarEstiloCondicao(this, itemLinha);
+            }
+        });
         descricaoCol.setPrefWidth(340);
 
         TableColumn<ItemAnalise, Integer> quantidadeCol = new TableColumn<>("QUANTIDADE");
@@ -473,7 +689,7 @@ public class telaInicial extends Application {
 
         TableColumn<ItemAnalise, BigDecimal> valorTotalCol = new TableColumn<>("VALOR TOTAL");
         valorTotalCol.setCellValueFactory(data -> data.getValue().valorTotalProperty());
-        valorTotalCol.setCellFactory(col -> new BigDecimalTableCell(true, true));
+        valorTotalCol.setCellFactory(col -> new BigDecimalTableCell(true, true,true));
         valorTotalCol.setPrefWidth(125);
 
         TableColumn<ItemAnalise, BigDecimal> variacaoAtualCol = new TableColumn<>("VARIAÇÃO ATUAL");
@@ -658,14 +874,92 @@ public class telaInicial extends Application {
         }
 
         item.aplicarDadosItem(itemService.buscarPorCodigo(item.getCodigo()).orElse(null));
-        analiseService.recalcular(item);
+        recalcularItem(item);
         recalcularResumo();
         tabela.refresh();
     }
     
     private record AtualizacaoLinha(int indiceLinha, DadosItem dadosItem) {
     }
+    
+    
+    private void abrirTelaCondicao(ItemAnalise item) {
+        if (item == null || isLinhaRodapeTabela(item)) {
+            return;
+        }
 
+        TelaCondicao telaCondicao = new TelaCondicao();
+        boolean alterou = telaCondicao.exibir(tabela.getScene().getWindow(), item);
+
+        if (alterou) {
+            tabela.refresh();
+        }
+    }
+    
+    private void aplicarEstiloCondicao(TableCell<ItemAnalise, ?> cell, ItemAnalise item) {
+    if (cell == null) {
+        return;
+    }
+
+    if (item == null || isLinhaRodapeTabela(item)) {
+        cell.setStyle("");
+        return;
+    }
+
+    CondicaoVenda condicao = item.getCondicaoVenda();
+
+    if (condicao == null || condicao == CondicaoVenda.NORMAL) {
+        cell.setStyle("");
+        return;
+    }
+
+    String corFundo;
+    String corTexto;
+
+    if (condicao == CondicaoVenda.ESPECIAL) {
+        corFundo = item.getCorEspecialFundo();
+        corTexto = item.getCorEspecialTexto();
+    } else {
+        corFundo = condicao.getCorFundo();
+        corTexto = condicao.getCorTexto();
+    }
+
+    if (corFundo == null || corFundo.isBlank()) {
+        cell.setStyle("");
+        return;
+    }
+
+    cell.setStyle(
+            "-fx-background-color: " + corFundo + ";" +
+            "-fx-text-fill: " + corTexto + ";" +
+            "-fx-font-weight: bold;"
+    );
+}
+
+    private String montarEstiloCampoEditavelPorCondicao(ItemAnalise item) {
+    if (item == null || isLinhaRodapeTabela(item)) {
+        return "";
+    }
+
+    CondicaoVenda condicao = item.getCondicaoVenda();
+
+    if (condicao == null || condicao == CondicaoVenda.NORMAL) {
+        return "";
+    }
+
+    String corTexto;
+
+    if (condicao == CondicaoVenda.ESPECIAL) {
+        corTexto = item.getCorEspecialTexto();
+    } else {
+        corTexto = condicao.getCorTexto();
+    }
+
+    return "-fx-background-color: transparent;" +
+            "-fx-text-fill: " + corTexto + ";" +
+            "-fx-font-weight: bold;";
+}
+    
     private void aplicarValorPadrao() {
         int itensAtualizados = 0;
         int itensSemPrecoPadrao = 0;
@@ -697,7 +991,7 @@ public class telaInicial extends Application {
                 item.aplicarDadosItem(itemService.buscarPorCodigo(item.getCodigo()).orElse(null));
             }
 
-            analiseService.recalcular(item);
+            recalcularItem(item);
             itensAtualizados++;
         }
 
@@ -812,6 +1106,12 @@ public class telaInicial extends Application {
             campo.setAlignment(Pos.CENTER);
             campo.setMaxWidth(Double.MAX_VALUE);
 
+            campo.focusedProperty().addListener((obs, estavaFocado, estaFocado) -> {
+                if (!estaFocado) {
+                    confirmarValor();
+                }
+            });
+            
             campo.setOnAction(event -> confirmarValor());
 
             campo.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
@@ -824,13 +1124,19 @@ public class telaInicial extends Application {
 
                     String textoColado = clipboard.getString();
 
-                    if (!textoTemMultiplasCelulas(textoColado)) {
+                    if (textoTemMultiplasCelulas(textoColado)) {
+                        colarQuantidadesEmLote(textoColado, getIndex());
+                        event.consume();
                         return;
                     }
-
-                    colarQuantidadesEmLote(textoColado, getIndex());
-                    event.consume();
                 }
+
+                tratarNavegacaoCampoEditavel(
+                        event,
+                        getIndex(),
+                        COLUNA_QUANTIDADE,
+                        this::confirmarValor
+                );
             });
         }
 
@@ -840,20 +1146,34 @@ public class telaInicial extends Application {
 
             if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                 setGraphic(null);
-                setText(null);
+                setText("");
+                setStyle("");
+                campo.setStyle("");
                 return;
             }
-            
-            if (isLinhaRodapeTabela(getTableRow().getItem())) {
+
+            ItemAnalise itemLinha = getTableRow().getItem();
+
+            if (isLinhaRodapeTabela(itemLinha)) {
                 setGraphic(null);
                 setText(valor == null ? "" : valor.toString());
                 setAlignment(Pos.CENTER);
+
+                // IMPORTANTE: limpa qualquer cor herdada de célula reaproveitada
+                setStyle("");
+                campo.setStyle("");
+
                 return;
             }
 
             campo.setText(valor == null || valor == 0 ? "" : valor.toString());
             setText(null);
             setGraphic(campo);
+            setAlignment(Pos.CENTER);
+
+            aplicarEstiloCondicao(this, itemLinha);
+            campo.setStyle(montarEstiloCampoEditavelPorCondicao(itemLinha));
+            focarCampoSePendente(COLUNA_QUANTIDADE, getIndex(), campo);
         }
 
         private void confirmarValor() {
@@ -867,7 +1187,7 @@ public class telaInicial extends Application {
 
             if (novaQuantidade != item.getQuantidade()) {
                 item.setQuantidade(novaQuantidade);
-                analiseService.recalcular(item);
+                recalcularItem(item);
                 recalcularResumo();
                 tabela.refresh();
             }
@@ -891,9 +1211,15 @@ public class telaInicial extends Application {
 
         public ValorUnitarioEditavelCell() {
             campo.getStyleClass().add("campo-codigo-tabela");
-            campo.setAlignment(Pos.CENTER_RIGHT);
+            campo.setAlignment(Pos.CENTER);
             campo.setMaxWidth(Double.MAX_VALUE);
 
+            campo.focusedProperty().addListener((obs, estavaFocado, estaFocado) -> {
+                if (!estaFocado) {
+                    confirmarValor();
+                }
+            });
+            
             campo.setOnAction(event -> confirmarValor());
 
             campo.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
@@ -906,18 +1232,31 @@ public class telaInicial extends Application {
 
                     String textoColado = clipboard.getString();
 
-                    if (!textoTemMultiplasCelulas(textoColado)) {
+                    if (textoTemMultiplasCelulas(textoColado)) {
+                        colarValoresUnitariosEmLote(textoColado, getIndex());
+                        event.consume();
                         return;
                     }
-
-                    colarValoresUnitariosEmLote(textoColado, getIndex());
-                    event.consume();
                 }
+
+                tratarNavegacaoCampoEditavel(
+                        event,
+                        getIndex(),
+                        COLUNA_VALOR_UNITARIO,
+                        this::confirmarValor
+                );
             });
         }
 
         @Override
         protected void updateItem(BigDecimal valor, boolean empty) {
+        	if (empty) {
+        	    setText("");
+        	    setGraphic(null);
+        	    setStyle("");
+        	    campo.setStyle("");
+        	    return;
+        	}
             super.updateItem(valor, empty);
 
             if (empty || getTableRow() == null || getTableRow().getItem() == null) {
@@ -929,12 +1268,20 @@ public class telaInicial extends Application {
             if (isLinhaRodapeTabela(getTableRow().getItem())) {
                 setGraphic(null);
                 setText("");
+                setStyle("");
+                campo.setStyle("");
                 return;
             }
 
             campo.setText(formatarValorEditavel(valor));
             setText(null);
             setGraphic(campo);
+            setAlignment(Pos.CENTER);
+            
+            ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+            aplicarEstiloCondicao(this, itemLinha);
+            campo.setStyle(montarEstiloCampoEditavelPorCondicao(itemLinha));
+            focarCampoSePendente(COLUNA_VALOR_UNITARIO, getIndex(), campo);
         }
 
         private void confirmarValor() {
@@ -948,7 +1295,7 @@ public class telaInicial extends Application {
 
             if (novoValor.compareTo(item.getValorUnitario()) != 0) {
                 item.setValorUnitario(novoValor);
-                analiseService.recalcular(item);
+                recalcularItem(item);
                 recalcularResumo();
                 tabela.refresh();
             }
@@ -1007,7 +1354,7 @@ public class telaInicial extends Application {
             ItemAnalise item = itens.get(indiceLinha);
             item.setQuantidade(converterQuantidadeColada(valorTexto));
 
-            analiseService.recalcular(item);
+            recalcularItem(item);
 
             indiceLinha++;
         }
@@ -1031,7 +1378,7 @@ public class telaInicial extends Application {
             ItemAnalise item = itens.get(indiceLinha);
             item.setValorUnitario(converterMoedaColada(valorTexto));
 
-            analiseService.recalcular(item);
+            recalcularItem(item);
 
             indiceLinha++;
         }
@@ -1119,7 +1466,7 @@ public class telaInicial extends Application {
             item.setCodigo(codigo);
 
             item.aplicarDadosItem(itemService.buscarPorCodigo(codigo).orElse(null));
-            analiseService.recalcular(item);
+            recalcularItem(item);
 
             indiceLinha++;
         }
@@ -1260,9 +1607,53 @@ public class telaInicial extends Application {
         private final Button botaoOpcoes = new Button();
         private final HBox container = new HBox(2);
 
+        private void atualizarIconeOpcoes(ItemAnalise itemLinha) {
+            if (deveUsarIconeBranco(itemLinha)) {
+                botaoOpcoes.setGraphic(carregarIcone("item-opcoes-branco.png", 10, 16));
+            } else {
+                botaoOpcoes.setGraphic(carregarIcone("item-opcoes.png", 10, 16));
+            }
+        }
+
+        private boolean deveUsarIconeBranco(ItemAnalise itemLinha) {
+            if (itemLinha == null || isLinhaRodapeTabela(itemLinha)) {
+                return false;
+            }
+
+            CondicaoVenda condicao = itemLinha.getCondicaoVenda();
+
+            if (condicao == null || condicao == CondicaoVenda.NORMAL) {
+                return false;
+            }
+
+            String corTexto;
+
+            if (condicao == CondicaoVenda.ESPECIAL) {
+                corTexto = itemLinha.getCorEspecialTexto();
+            } else {
+                corTexto = condicao.getCorTexto();
+            }
+
+            return "#FFFFFF".equalsIgnoreCase(corTexto)
+                    || "white".equalsIgnoreCase(corTexto);
+        }
+        
+        private void abrirCondicaoDaLinhaAtual() {
+            confirmarCodigo();
+
+            ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+
+            if (item == null || isLinhaRodapeTabela(item) || !temCodigoPreenchido(item)) {
+                return;
+            }
+
+            abrirTelaCondicao(item);
+        }
+        
         public CodigoComBotaoCell() {
-            campoCodigo.getStyleClass().add("campo-codigo-tabela");
+        	campoCodigo.getStyleClass().add("campo-codigo-tabela");
             campoCodigo.setMaxWidth(Double.MAX_VALUE);
+            campoCodigo.setAlignment(Pos.CENTER);
 
             botaoOpcoes.getStyleClass().add("botao-opcoes-item");
             botaoOpcoes.setGraphic(carregarIcone("item-opcoes.png", 10, 16));
@@ -1289,13 +1680,19 @@ public class telaInicial extends Application {
 
                     String textoColado = clipboard.getString();
 
-                    if (!textoTemMultiplasCelulas(textoColado)) {
+                    if (textoTemMultiplasCelulas(textoColado)) {
+                        colarCodigosEmLote(textoColado, getIndex());
+                        event.consume();
                         return;
                     }
-
-                    colarCodigosEmLote(textoColado, getIndex());
-                    event.consume();
                 }
+
+                tratarNavegacaoCampoEditavel(
+                        event,
+                        getIndex(),
+                        COLUNA_CODIGO,
+                        this::confirmarCodigo
+                );
             });
 
             campoCodigo.focusedProperty().addListener((obs, estavaFocado, estaFocado) -> {
@@ -1304,21 +1701,24 @@ public class telaInicial extends Application {
                 }
             });
 
-            botaoOpcoes.setOnAction(event -> {
-                ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
-
-                if (item != null) {
-                    mostrarAviso(
-                            "Opções do item",
-                            "Função do botão será definida depois.\nItem: " + item.getCodigo()
-                    );
-                }
-            });
+            botaoOpcoes.setOnAction(event -> abrirCondicaoDaLinhaAtual());
+            
+            
+            
         }
 
         @Override
         protected void updateItem(String codigo, boolean empty) {
             super.updateItem(codigo, empty);
+            
+            if (empty) {
+                setText("");
+                setGraphic(null);
+                setStyle("");
+                campoCodigo.setStyle("");
+                botaoOpcoes.setGraphic(carregarIcone("item-opcoes.png", 10, 16));
+                return;
+            }
 
             if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                 setGraphic(null);
@@ -1335,6 +1735,12 @@ public class telaInicial extends Application {
             campoCodigo.setText(codigo == null ? "" : codigo);
             setText(null);
             setGraphic(container);
+            ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+
+            aplicarEstiloCondicao(this, itemLinha);
+            campoCodigo.setStyle(montarEstiloCampoEditavelPorCondicao(itemLinha));
+            atualizarIconeOpcoes(itemLinha);
+            focarCampoSePendente(COLUNA_CODIGO, getIndex(), campoCodigo);
         }
 
         private void confirmarCodigo() {
@@ -1352,6 +1758,48 @@ public class telaInicial extends Application {
             }
         }
     }
+        
+    private void abrirTelaBuscaPreco() {
+    List<ItemAnalise> itensParaBuscarPreco = new ArrayList<>();
+
+    for (ItemAnalise item : itens) {
+        if (item == null || isLinhaRodapeTabela(item)) {
+            continue;
+        }
+
+        if (!temCodigoPreenchido(item)) {
+            continue;
+        }
+
+        itensParaBuscarPreco.add(item);
+    }
+
+    if (itensParaBuscarPreco.isEmpty()) {
+        mostrarAviso(
+                "Buscar preço",
+                "Não há itens com código preenchido para buscar preço."
+        );
+        return;
+    }
+
+    TelaBuscaPreco telaBuscaPreco = new TelaBuscaPreco();
+    boolean carregou = telaBuscaPreco.exibir(
+            tabela.getScene().getWindow(),
+            itensParaBuscarPreco,
+            itemService
+    );
+
+    if (!carregou) {
+        return;
+    }
+
+    for (ItemAnalise item : itensParaBuscarPreco) {
+        recalcularItem(item);
+    }
+
+    recalcularResumo();
+    tabela.refresh();
+}
     
     private static class InteiroConverter extends StringConverter<Integer> {
         @Override
@@ -1417,14 +1865,20 @@ public class telaInicial extends Application {
     private class BigDecimalTableCell extends TableCell<ItemAnalise, BigDecimal> {
         private final boolean moeda;
         private final boolean exibirNoRodape;
+        private final boolean aplicarCondicaoVisual;
 
         public BigDecimalTableCell(boolean moeda) {
-            this(moeda, false);
+            this(moeda, false, false);
         }
 
         public BigDecimalTableCell(boolean moeda, boolean exibirNoRodape) {
+            this(moeda, exibirNoRodape, false);
+        }
+
+        public BigDecimalTableCell(boolean moeda, boolean exibirNoRodape, boolean aplicarCondicaoVisual) {
             this.moeda = moeda;
             this.exibirNoRodape = exibirNoRodape;
+            this.aplicarCondicaoVisual = aplicarCondicaoVisual;
             setAlignment(Pos.CENTER_RIGHT);
         }
 
@@ -1432,8 +1886,9 @@ public class telaInicial extends Application {
         protected void updateItem(BigDecimal item, boolean empty) {
             super.updateItem(item, empty);
 
-            if (empty || item == null) {
+            if (empty) {
                 setText("");
+                setStyle("");
                 return;
             }
 
@@ -1441,20 +1896,22 @@ public class telaInicial extends Application {
 
             if (isLinhaRodapeTabela(itemLinha) && !exibirNoRodape) {
                 setText("");
+                setStyle("");
                 return;
             }
 
-            if (!isLinhaRodapeTabela(itemLinha)
-                    && moeda
-                    && item.compareTo(BigDecimal.ZERO) == 0) {
-                setText("");
-                return;
-            }
+            BigDecimal valor = item == null ? BigDecimal.ZERO : item;
 
             if (moeda) {
-                setText(formatarMoeda(item));
+                setText(formatarMoeda(valor));
             } else {
-                setText(formatarPercentual(item));
+                setText(formatarPercentual(valor));
+            }
+
+            if (aplicarCondicaoVisual) {
+                aplicarEstiloCondicao(this, itemLinha);
+            } else {
+                setStyle("");
             }
         }
     }
@@ -1556,6 +2013,40 @@ public class telaInicial extends Application {
         }
     }
     
+    private void recalcularItem(ItemAnalise item) {
+        analiseService.recalcular(item, getPercentualBaseEstadoSelecionado());
+    }
+    
+    private void recalcularTudoAposAlterarEstado() {
+        for (ItemAnalise item : itens) {
+            if (item == null || isLinhaRodapeTabela(item)) {
+                continue;
+            }
+
+            if (!temCodigoPreenchido(item)) {
+                continue;
+            }
+
+            recalcularItem(item);
+        }
+
+        recalcularResumo();
+
+        if (tabela != null) {
+            tabela.refresh();
+        }
+    }
+    
+    private BigDecimal getPercentualBaseEstadoSelecionado() {
+        EstadoInfo estadoSelecionado = estadoCombo.getSelectionModel().getSelectedItem();
+
+        if (estadoSelecionado == null) {
+            return BigDecimal.ZERO;
+        }
+
+        return estadoSelecionado.getBaseMargem();
+    }
+    
     private class DataTableCell extends TableCell<ItemAnalise, LocalDate> {
         private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -1563,34 +2054,46 @@ public class telaInicial extends Application {
             setAlignment(Pos.CENTER);
         }
 
+        private BigDecimal getPercentualBaseEstadoSelecionado() {
+            EstadoInfo estadoSelecionado = estadoCombo.getSelectionModel().getSelectedItem();
+
+            if (estadoSelecionado == null || estadoSelecionado.getBaseMargem() == null) {
+                return BigDecimal.ZERO;
+            }
+
+            return estadoSelecionado.getBaseMargem();
+        }
+        
+        
+        
         @Override
-protected void updateItem(LocalDate data, boolean empty) {
-    super.updateItem(data, empty);
+    protected void updateItem(LocalDate data, boolean empty) {
+        super.updateItem(data, empty);
 
-    if (empty) {
-        setText("");
-        return;
-    }
+        if (empty) {
+        	setText("");
+        	return;
+        }
 
-    ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+        ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
 
-    if (isLinhaRodapeTabela(itemLinha)) {
-        setText("");
-        return;
-    }
+        if (isLinhaRodapeTabela(itemLinha)) {
+        	setText("");
+        	return;
+        }
 
-    if (!linhaTemCodigo(itemLinha)) {
-        setText("");
-        return;
-    }
+        if (!linhaTemCodigo(itemLinha)) {
+        	setText("");
+        	return;
+        }
 
-    if (data == null) {
-        setText("S./REG.");
-        return;
-    }
+        if (data == null) {
+        	setText("S./REG.");
+        	return;
+        }
 
-    setText(formatter.format(data));
-}
+        setText(formatter.format(data));
+        }
 
         private boolean linhaTemCodigo(ItemAnalise item) {
             return item != null

@@ -14,6 +14,8 @@ public class ItemAnalise {
     private final StringProperty codigo = new SimpleStringProperty("");
     private final StringProperty descricao = new SimpleStringProperty("");
     private final IntegerProperty quantidade = new SimpleIntegerProperty(0);
+    
+    private final ObjectProperty<CondicaoVenda> condicaoVenda = new SimpleObjectProperty<>(CondicaoVenda.NORMAL);
 
     private final ObjectProperty<BigDecimal> valorUnitario = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> valorTotal = new SimpleObjectProperty<>(BigDecimal.ZERO);
@@ -42,6 +44,53 @@ public class ItemAnalise {
     private final ObjectProperty<BigDecimal> ipiProposta = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> ipiAtual = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> ipiAnterior = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    
+    private final StringProperty corEspecialFundo = new SimpleStringProperty("#92D050");
+    private final StringProperty corEspecialTexto = new SimpleStringProperty("#000000");
+    
+    public String getCorEspecialFundo() {
+        return corEspecialFundo.get();
+    }
+
+    public void setCorEspecialFundo(String corEspecialFundo) {
+        this.corEspecialFundo.set(
+                corEspecialFundo == null || corEspecialFundo.isBlank()
+                        ? "#92D050"
+                        : corEspecialFundo
+        );
+    }
+
+    public StringProperty corEspecialFundoProperty() {
+        return corEspecialFundo;
+    }
+
+    public String getCorEspecialTexto() {
+        return corEspecialTexto.get();
+    }
+
+    public void setCorEspecialTexto(String corEspecialTexto) {
+        this.corEspecialTexto.set(
+                corEspecialTexto == null || corEspecialTexto.isBlank()
+                        ? "#000000"
+                        : corEspecialTexto
+        );
+    }
+
+    public StringProperty corEspecialTextoProperty() {
+        return corEspecialTexto;
+    }
+    
+    public CondicaoVenda getCondicaoVenda() {
+        return condicaoVenda.get();
+    }
+
+    public void setCondicaoVenda(CondicaoVenda condicaoVenda) {
+        this.condicaoVenda.set(condicaoVenda == null ? CondicaoVenda.NORMAL : condicaoVenda);
+    }
+
+    public ObjectProperty<CondicaoVenda> condicaoVendaProperty() {
+        return condicaoVenda;
+    }
     
     public BigDecimal getPercentualIpi() {
         return percentualIpi.get();
