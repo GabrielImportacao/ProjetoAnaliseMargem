@@ -6,13 +6,21 @@ import java.time.LocalDate;
 public class DadosItem {
     private final String codigo;
     private final String descricao;
+
     private final BigDecimal custoAtual;
     private final BigDecimal custoPromob;
     private final BigDecimal custoAnterior;
+
     private final String registroCustoAtual;
     private final String registroCustoPromob;
     private final String registroCustoAnterior;
+
     private final LocalDate dataCustoAtual;
+    private final LocalDate dataCustoPromob;
+    private final LocalDate dataCustoAnterior;
+    
+    private final BigDecimal ipi;
+    private final BigDecimal precoPadraoVenda;
 
     public DadosItem(String codigo,
                      String descricao,
@@ -22,7 +30,11 @@ public class DadosItem {
                      String registroCustoAtual,
                      String registroCustoPromob,
                      String registroCustoAnterior,
-                     LocalDate dataCustoAtual) {
+                     LocalDate dataCustoAtual,
+                     LocalDate dataCustoPromob,
+                     LocalDate dataCustoAnterior,
+    				 BigDecimal precoPadraoVenda,
+    				 BigDecimal ipi){
         this.codigo = codigo;
         this.descricao = descricao;
         this.custoAtual = custoAtual;
@@ -32,8 +44,20 @@ public class DadosItem {
         this.registroCustoPromob = registroCustoPromob;
         this.registroCustoAnterior = registroCustoAnterior;
         this.dataCustoAtual = dataCustoAtual;
+        this.dataCustoPromob = dataCustoPromob;
+        this.dataCustoAnterior = dataCustoAnterior;
+        this.precoPadraoVenda = precoPadraoVenda;
+        this.ipi = ipi;
     }
 
+    public BigDecimal getIpi() {
+        return ipi;
+    }
+    
+    public BigDecimal getPrecoPadraoVenda() {
+        return precoPadraoVenda;
+    }
+    
     public String getCodigo() {
         return codigo;
     }
@@ -68,5 +92,13 @@ public class DadosItem {
 
     public LocalDate getDataCustoAtual() {
         return dataCustoAtual;
+    }
+
+    public LocalDate getDataCustoPromob() {
+        return dataCustoPromob;
+    }
+
+    public LocalDate getDataCustoAnterior() {
+        return dataCustoAnterior;
     }
 }

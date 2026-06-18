@@ -14,6 +14,8 @@ public class ItemAnalise {
     private final StringProperty codigo = new SimpleStringProperty("");
     private final StringProperty descricao = new SimpleStringProperty("");
     private final IntegerProperty quantidade = new SimpleIntegerProperty(0);
+    
+    private final ObjectProperty<CondicaoVenda> condicaoVenda = new SimpleObjectProperty<>(CondicaoVenda.NORMAL);
 
     private final ObjectProperty<BigDecimal> valorUnitario = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> valorTotal = new SimpleObjectProperty<>(BigDecimal.ZERO);
@@ -35,6 +37,120 @@ public class ItemAnalise {
     private final ObjectProperty<BigDecimal> custoAtual = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> custoPromob = new SimpleObjectProperty<>(BigDecimal.ZERO);
     private final ObjectProperty<BigDecimal> custoAnterior = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    private final ObjectProperty<BigDecimal> precoPadraoVenda = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    
+    private final ObjectProperty<BigDecimal> percentualIpi = new SimpleObjectProperty<>(BigDecimal.ZERO);
+
+    private final ObjectProperty<BigDecimal> ipiProposta = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    private final ObjectProperty<BigDecimal> ipiAtual = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    private final ObjectProperty<BigDecimal> ipiAnterior = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    
+    private final StringProperty corEspecialFundo = new SimpleStringProperty("#92D050");
+    private final StringProperty corEspecialTexto = new SimpleStringProperty("#000000");
+    
+    public String getCorEspecialFundo() {
+        return corEspecialFundo.get();
+    }
+
+    public void setCorEspecialFundo(String corEspecialFundo) {
+        this.corEspecialFundo.set(
+                corEspecialFundo == null || corEspecialFundo.isBlank()
+                        ? "#92D050"
+                        : corEspecialFundo
+        );
+    }
+
+    public StringProperty corEspecialFundoProperty() {
+        return corEspecialFundo;
+    }
+
+    public String getCorEspecialTexto() {
+        return corEspecialTexto.get();
+    }
+
+    public void setCorEspecialTexto(String corEspecialTexto) {
+        this.corEspecialTexto.set(
+                corEspecialTexto == null || corEspecialTexto.isBlank()
+                        ? "#000000"
+                        : corEspecialTexto
+        );
+    }
+
+    public StringProperty corEspecialTextoProperty() {
+        return corEspecialTexto;
+    }
+    
+    public CondicaoVenda getCondicaoVenda() {
+        return condicaoVenda.get();
+    }
+
+    public void setCondicaoVenda(CondicaoVenda condicaoVenda) {
+        this.condicaoVenda.set(condicaoVenda == null ? CondicaoVenda.NORMAL : condicaoVenda);
+    }
+
+    public ObjectProperty<CondicaoVenda> condicaoVendaProperty() {
+        return condicaoVenda;
+    }
+    
+    public BigDecimal getPercentualIpi() {
+        return percentualIpi.get();
+    }
+
+    public void setPercentualIpi(BigDecimal percentualIpi) {
+        this.percentualIpi.set(percentualIpi == null ? BigDecimal.ZERO : percentualIpi);
+    }
+
+    public ObjectProperty<BigDecimal> percentualIpiProperty() {
+        return percentualIpi;
+    }
+
+    public BigDecimal getIpiProposta() {
+        return ipiProposta.get();
+    }
+
+    public void setIpiProposta(BigDecimal ipiProposta) {
+        this.ipiProposta.set(ipiProposta == null ? BigDecimal.ZERO : ipiProposta);
+    }
+
+    public ObjectProperty<BigDecimal> ipiPropostaProperty() {
+        return ipiProposta;
+    }
+
+    public BigDecimal getIpiAtual() {
+        return ipiAtual.get();
+    }
+
+    public void setIpiAtual(BigDecimal ipiAtual) {
+        this.ipiAtual.set(ipiAtual == null ? BigDecimal.ZERO : ipiAtual);
+    }
+
+    public ObjectProperty<BigDecimal> ipiAtualProperty() {
+        return ipiAtual;
+    }
+
+    public BigDecimal getIpiAnterior() {
+        return ipiAnterior.get();
+    }
+
+    public void setIpiAnterior(BigDecimal ipiAnterior) {
+        this.ipiAnterior.set(ipiAnterior == null ? BigDecimal.ZERO : ipiAnterior);
+    }
+
+    public ObjectProperty<BigDecimal> ipiAnteriorProperty() {
+        return ipiAnterior;
+    }
+    
+    public BigDecimal getPrecoPadraoVenda() {
+        return precoPadraoVenda.get();
+    }
+
+    public void setPrecoPadraoVenda(BigDecimal precoPadraoVenda) {
+        this.precoPadraoVenda.set(precoPadraoVenda == null ? BigDecimal.ZERO : precoPadraoVenda);
+    }
+
+    public ObjectProperty<BigDecimal> precoPadraoVendaProperty() {
+        return precoPadraoVenda;
+    }
 
     public String getCodigo() {
         return codigo.get();
@@ -255,27 +371,49 @@ public class ItemAnalise {
     public void aplicarDadosItem(DadosItem dados) {
         if (dados == null) {
             setDescricao("ITEM NÃO ENCONTRADO");
+
             setCustoAtual(BigDecimal.ZERO);
             setCustoPromob(BigDecimal.ZERO);
             setCustoAnterior(BigDecimal.ZERO);
+
             setRegistroCustoAtual("");
             setRegistroCustoPromob("");
             setRegistroCustoAnterior("");
+
             setDataCustoAtual(null);
             setDataCustoPromob(null);
             setDataCustoAnterior(null);
+
+            setPrecoPadraoVenda(BigDecimal.ZERO);
+
+            setPercentualIpi(BigDecimal.ZERO);
+            setIpiProposta(BigDecimal.ZERO);
+            setIpiAtual(BigDecimal.ZERO);
+            setIpiAnterior(BigDecimal.ZERO);
+
             return;
         }
 
         setDescricao(dados.getDescricao());
+
         setCustoAtual(dados.getCustoAtual());
         setCustoPromob(dados.getCustoPromob());
         setCustoAnterior(dados.getCustoAnterior());
+
         setRegistroCustoAtual(dados.getRegistroCustoAtual());
         setRegistroCustoPromob(dados.getRegistroCustoPromob());
         setRegistroCustoAnterior(dados.getRegistroCustoAnterior());
+
         setDataCustoAtual(dados.getDataCustoAtual());
-        setDataCustoPromob(dados.getDataCustoAtual());
-        setDataCustoAnterior(dados.getDataCustoAtual());
+        setDataCustoPromob(dados.getDataCustoPromob());
+        setDataCustoAnterior(dados.getDataCustoAnterior());
+
+        setPrecoPadraoVenda(dados.getPrecoPadraoVenda());
+
+        setPercentualIpi(dados.getIpi());
+
+        setIpiProposta(BigDecimal.ZERO);
+        setIpiAtual(BigDecimal.ZERO);
+        setIpiAnterior(BigDecimal.ZERO);
     }
 }
