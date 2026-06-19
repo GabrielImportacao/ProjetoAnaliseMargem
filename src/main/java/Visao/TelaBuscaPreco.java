@@ -1,8 +1,11 @@
 package Visao;
 
 import Controle.ItemService;
+import Infraestrutura.DiagnosticoAmbiente;
 import Modelo.DadosItem;
 import Modelo.ItemAnalise;
+import Visao.componentes.BotaoPadrao;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -31,6 +34,7 @@ import javafx.stage.Window;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 
@@ -129,14 +133,35 @@ public class TelaBuscaPreco {
     public boolean exibir(Window janelaDona, List<ItemAnalise> itensParaBuscar, ItemService itemService) {
         linhas.clear();
 
+        List<String> codigosNaoEncontrados = new ArrayList<>();
+
         for (ItemAnalise item : itensParaBuscar) {
             DadosItem dadosItem = itemService.buscarPorCodigo(item.getCodigo()).orElse(null);
 
             if (dadosItem == null) {
+                codigosNaoEncontrados.add(item.getCodigo());
                 continue;
             }
 
             linhas.add(new LinhaBuscaPreco(item, dadosItem));
+        }
+
+        if (!codigosNaoEncontrados.isEmpty()) {
+            javafx.scene.control.Alert aviso = new javafx.scene.control.Alert(
+                    javafx.scene.control.Alert.AlertType.WARNING
+            );
+            aviso.setTitle("Itens não encontrados");
+            aviso.setHeaderText(null);
+            aviso.setContentText(
+                    "Alguns itens não foram encontrados na base e não serão carregados:\n\n"
+                            + String.join("\n", codigosNaoEncontrados)
+            );
+
+            if (janelaDona != null) {
+                aviso.initOwner(janelaDona);
+            }
+
+            aviso.showAndWait();
         }
 
         completarLinhasVisuais();
@@ -208,24 +233,8 @@ public class TelaBuscaPreco {
     }
 
     private Button criarBotao(String texto, double largura) {
-        Button botao = new Button(texto);
-        botao.setPrefWidth(largura);
-        botao.setMinHeight(28);
-        botao.setCursor(Cursor.HAND);
-
-        botao.setStyle(
-                "-fx-background-color: #F2F2F2;" +
-                "-fx-border-color: #333333;" +
-                "-fx-border-width: 1.5;" +
-                "-fx-background-radius: 0;" +
-                "-fx-border-radius: 0;" +
-                "-fx-font-size: 12px;" +
-                "-fx-font-weight: bold;" +
-                "-fx-text-fill: #000000;"
-        );
-
-        return botao;
-    }
+    return BotaoPadrao.criar(texto, largura);
+}
 
     @SuppressWarnings({ "unchecked", "deprecation" })
 	private TableView<LinhaBuscaPreco> criarTabela() {
@@ -246,12 +255,12 @@ public class TelaBuscaPreco {
 
         TableColumn<LinhaBuscaPreco, String> codigoCol = new TableColumn<>("CÓDIGO");
         codigoCol.setCellValueFactory(data -> data.getValue().codigoProperty());
-        codigoCol.setCellFactory(col -> new TextoCell(Pos.CENTER_LEFT));
+        codigoCol.setCellFactory(col -> new TextoCell(Pos.CENTER));
         codigoCol.setPrefWidth(100);
 
         TableColumn<LinhaBuscaPreco, String> descricaoCol = new TableColumn<>("DESCRIÇÃO");
         descricaoCol.setCellValueFactory(data -> data.getValue().descricaoProperty());
-        descricaoCol.setCellFactory(col -> new TextoCell(Pos.CENTER_LEFT));
+        descricaoCol.setCellFactory(col -> new TextoCell(Pos.CENTER));
         descricaoCol.setPrefWidth(210);
 
         TableColumn<LinhaBuscaPreco, BigDecimal> precoBaseCol = new TableColumn<>("PREÇO BASE");
@@ -283,25 +292,29 @@ public class TelaBuscaPreco {
     }
 
     private void aplicarEstiloCabecalho(TableView<LinhaBuscaPreco> tabela) {
-        tabela.widthProperty().addListener((obs, oldValue, newValue) -> {
-            tabela.lookupAll(".column-header").forEach(node -> node.setStyle(
-                    "-fx-background-color: #4A4A4A;" +
-                    "-fx-border-color: #555555;" +
-                    "-fx-border-width: 0 1 1 0;"
-            ));
+    Runnable aplicar = () -> {
+        tabela.lookupAll(".column-header").forEach(node -> node.setStyle(
+                "-fx-background-color: #4A4A4A;" +
+                "-fx-border-color: #555555;" +
+                "-fx-border-width: 0 1 1 0;"
+        ));
 
-            tabela.lookupAll(".column-header .label").forEach(node -> node.setStyle(
-                    "-fx-text-fill: white;" +
-                    "-fx-font-weight: bold;" +
-                    "-fx-font-size: 12px;" +
-                    "-fx-alignment: center;"
-            ));
+        tabela.lookupAll(".column-header .label").forEach(node -> node.setStyle(
+                "-fx-text-fill: white;" +
+                "-fx-font-weight: bold;" +
+                "-fx-font-size: 12px;" +
+                "-fx-alignment: center;" +
+                "-fx-text-alignment: center;"
+        ));
 
-            tabela.lookupAll(".filler").forEach(node -> node.setStyle(
-                    "-fx-background-color: #4A4A4A;"
-            ));
-        });
-    }
+        tabela.lookupAll(".filler").forEach(node -> node.setStyle(
+                "-fx-background-color: #4A4A4A;"
+        ));
+    };
+
+    Platform.runLater(aplicar);
+    tabela.widthProperty().addListener((obs, oldValue, newValue) -> aplicar.run());
+}
 
     private void carregarValoresNaTabelaPrincipal() {
         for (LinhaBuscaPreco linha : linhas) {
@@ -515,12 +528,13 @@ public class TelaBuscaPreco {
             this.tipoCampo = tipoCampo;
             this.consumidorValor = consumidorValor;
 
-            campo.setAlignment(tipoCampo == TipoCampo.DESCONTO ? Pos.CENTER : Pos.CENTER_RIGHT);
+            campo.setAlignment(Pos.CENTER);
             campo.setStyle(
                     "-fx-background-color: transparent;" +
                     "-fx-border-color: transparent;" +
                     "-fx-font-size: 12px;" +
-                    "-fx-text-fill: #000000;"
+                    "-fx-text-fill: #000000;" +
+                    "-fx-alignment: center;"
             );
 
             campo.setOnAction(event -> confirmarValor());
@@ -555,7 +569,7 @@ public class TelaBuscaPreco {
             campo.setText(formatarEditavel(valor));
             setText(null);
             setGraphic(campo);
-            setAlignment(tipoCampo == TipoCampo.DESCONTO ? Pos.CENTER : Pos.CENTER_RIGHT);
+            setAlignment(tipoCampo == TipoCampo.DESCONTO ? Pos.CENTER : Pos.CENTER);setAlignment(Pos.CENTER);
             aplicarEstiloLinha(this);
         }
 
@@ -583,10 +597,7 @@ public class TelaBuscaPreco {
                 return formatarPercentualMinimo(valorSeguro);
             }
 
-            return valorSeguro
-                    .setScale(2, RoundingMode.HALF_UP)
-                    .toString()
-                    .replace(".", ",");
+            return formatarMoeda(valorSeguro);
         }
     }
 
@@ -620,7 +631,7 @@ public class TelaBuscaPreco {
     	    }
 
     	    setText(formatarMoeda(valor == null ? BigDecimal.ZERO : valor));
-    	    setAlignment(Pos.CENTER_RIGHT);
+    	    setAlignment(Pos.CENTER);
     	    aplicarEstiloLinha(this);
     	}
     }

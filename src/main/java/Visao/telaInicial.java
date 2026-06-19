@@ -2,6 +2,8 @@ package Visao;
 
 import Controle.AnaliseService;
 import Controle.ItemService;
+import Infraestrutura.DiagnosticoAmbiente;
+import Infraestrutura.diagnostico.TratadorErros;
 import Modelo.CondicaoVenda;
 import Modelo.DadosItem;
 import Modelo.EstadoInfo;
@@ -21,6 +23,10 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import javafx.stage.Window;
+
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javafx.scene.input.Clipboard;
@@ -28,8 +34,10 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -40,10 +48,13 @@ import javafx.scene.layout.VBox;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URL;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Map;
+
 import Visao.componentes.MiniTabelaEstadoBase;
 import Visao.componentes.TabelaResumo;
 
@@ -70,6 +81,9 @@ public class telaInicial extends Application {
     private static final String CODIGO_LINHA_RODAPE_TABELA = "__RODAPE_TABELA__";
     private final ItemAnalise linhaRodapeTabela = new ItemAnalise();
     
+    private final List<TableColumn<ItemAnalise, ?>> ordemPadraoColunasTabela = new ArrayList<>();
+    private final Map<TableColumn<ItemAnalise, ?>, List<TableColumn<ItemAnalise, ?>>> ordemPadraoSubcolunasTabela = new HashMap<>();
+    
     private StackPane overlayAtualizacao;
     
     private static final String COLUNA_CODIGO = "CÓDIGO";
@@ -78,6 +92,7 @@ public class telaInicial extends Application {
 
     private int indiceLinhaFocoPendente = -1;
     private String colunaFocoPendente = null;
+    private boolean colagemEmLoteEmAndamento = false;
 
     public static void main(String[] args) {
         launch(args);
@@ -105,15 +120,52 @@ public class telaInicial extends Application {
         moverFocoHorizontal(indiceAtual, colunaAtual, event.isShiftDown());
     }
 
-    private void moverFocoVertical(int indiceAtual, String colunaAtual, boolean subir) {
-        int indiceDestino = subir ? indiceAtual - 1 : indiceAtual + 1;
+    private int obterIndiceRodapeTabela() {
+        int indiceRodape = itens.indexOf(linhaRodapeTabela);
 
-        if (indiceDestino < 0) {
+        if (indiceRodape >= 0) {
+            return indiceRodape;
+        }
+
+        return itens.size();
+    }
+
+    private void limparFocoTabela() {
+        indiceLinhaFocoPendente = -1;
+        colunaFocoPendente = null;
+
+        if (tabela == null) {
             return;
         }
 
-        focarCelulaEditavel(indiceDestino, colunaAtual);
+        tabela.getSelectionModel().clearSelection();
+
+        if (tabela.getFocusModel() != null) {
+            tabela.getFocusModel().focus(-1);
+        }
+
+        Platform.runLater(() -> {
+            if (tabela.getScene() != null && tabela.getScene().getRoot() != null) {
+                tabela.getScene().getRoot().requestFocus();
+            }
+        });
     }
+    
+    private void moverFocoVertical(int indiceAtual, String colunaAtual, boolean subir) {
+    int indiceDestino = subir ? indiceAtual - 1 : indiceAtual + 1;
+
+    if (indiceDestino < 0) {
+        limparFocoTabela();
+        return;
+    }
+
+    if (!subir && indiceDestino >= obterIndiceRodapeTabela()) {
+        limparFocoTabela();
+        return;
+    }
+
+    focarCelulaEditavel(indiceDestino, colunaAtual);
+}
 
     private void moverFocoHorizontal(int indiceAtual, String colunaAtual, boolean voltar) {
         List<String> colunasEditaveis = obterColunasEditaveisVisiveisNaOrdem();
@@ -206,15 +258,24 @@ public class telaInicial extends Application {
     
     @Override
     public void start(Stage stage) {
-        prepararDadosIniciais();
+    	TratadorErros.instalarHandlerGlobal();
+    	DiagnosticoAmbiente.registrarAmbienteInicial();
+
+        try {
+            prepararDadosIniciais();
+        } catch (Exception e) {
+            TratadorErros.tratar(stage, "Inicialização > preparar dados iniciais", e);
+            return;
+        }
 
         BorderPane root = new BorderPane();
         root.getStyleClass().add("root-app");
 
         VBox topo = criarTopo();
         TableView<ItemAnalise> tabelaCriada = criarTabela();
+        HBox barraAcoesTabela = criarBarraAcoesTabela();
 
-        VBox areaCentral = new VBox(tabelaCriada);
+        VBox areaCentral = new VBox(0, barraAcoesTabela, tabelaCriada);
         areaCentral.setAlignment(Pos.TOP_LEFT);
         VBox.setVgrow(tabelaCriada, Priority.NEVER);
 
@@ -227,8 +288,13 @@ public class telaInicial extends Application {
         
         rootComOverlay.setFocusTraversable(true);
 
+        System.out.println("JAR NOVO - TESTE CSS");
         Scene scene = new Scene(rootComOverlay, 1180, 680);
-        scene.getStylesheets().add(getClass().getResource("/estilo.css").toExternalForm());
+        scene.getStylesheets().add(
+                localizarRecurso("estilo.css").toExternalForm()
+        );
+        
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, this::tratarColagemGlobalTabela);
 
         scene.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
             if (!(event.getTarget() instanceof Node alvo)) {
@@ -252,11 +318,12 @@ public class telaInicial extends Application {
 
         tabelaCriada.prefHeightProperty().bind(
                 Bindings.createDoubleBinding(
-                        () -> calcularAlturaTabela(root, topo, rodape),
+                        () -> calcularAlturaTabela(root, topo, rodape, barraAcoesTabela),
                         itens,
                         root.heightProperty(),
                         topo.heightProperty(),
-                        rodape.heightProperty()
+                        rodape.heightProperty(),
+                        barraAcoesTabela.heightProperty()
                 )
         );
 
@@ -269,6 +336,69 @@ public class telaInicial extends Application {
         stage.setMinHeight(600);
         stage.show();
         preCarregarBasesAoIniciar();
+    }
+    
+    private HBox criarBarraAcoesTabela() {
+        HBox barra = new HBox(6);
+        barra.getStyleClass().add("barra-acoes-tabela");
+        barra.setAlignment(Pos.CENTER_LEFT);
+        barra.setPadding(new Insets(2, 0, 2, 6));
+        barra.setMinHeight(34);
+        barra.setPrefHeight(34);
+        barra.setMaxHeight(34);
+
+        Button reordenarButton = criarBotaoIconeTabela(
+                "reordenar.png",
+                "Reordenar colunas"
+        );
+        reordenarButton.setOnAction(event -> reordenarColunasTabela());
+
+        Button limparButton = criarBotaoIconeTabela(
+                "LIMPAR.png",
+                "Limpar tabela"
+        );
+        limparButton.setOnAction(event -> limparTabela());
+
+        barra.getChildren().addAll(reordenarButton, limparButton);
+
+        return barra;
+    }
+
+    private Button criarBotaoIconeTabela(String nomeIcone, String tooltip) {
+        Button botao = new Button();
+        botao.getStyleClass().add("botao-icone-tabela");
+        botao.setGraphic(carregarIcone(nomeIcone, 24, 24));
+        botao.setTooltip(new Tooltip(tooltip));
+        botao.setCursor(Cursor.HAND);
+        botao.setFocusTraversable(false);
+
+        botao.setMinSize(30, 30);
+        botao.setPrefSize(30, 30);
+        botao.setMaxSize(30, 30);
+
+        return botao;
+    }
+    
+    private void executarComTratamento(String contexto, Runnable acao) {
+        try {
+            acao.run();
+        } catch (Exception e) {
+            mostrarOverlayAtualizacao(false);
+            TratadorErros.tratar(getJanelaAtual(), contexto, e);
+        }
+    }
+
+    private Window getJanelaAtual() {
+        if (tabela != null && tabela.getScene() != null) {
+            return tabela.getScene().getWindow();
+        }
+
+        return null;
+    }
+
+    private void mostrarErro(String contexto, Throwable erro) {
+        mostrarOverlayAtualizacao(false);
+        TratadorErros.tratar(getJanelaAtual(), contexto, erro);
     }
     
     private boolean isLinhaRodapeTabela(ItemAnalise item) {
@@ -415,19 +545,19 @@ public class telaInicial extends Application {
     }
 
     private ImageView carregarIcone(String nomeArquivo, double largura, double altura) {
-        ImageView icone = new ImageView(
-                new javafx.scene.image.Image(
-                        getClass().getResourceAsStream("/icons/" + nomeArquivo)
-                )
-        );
+    URL url = localizarRecurso("icons/" + nomeArquivo);
 
-        icone.setFitWidth(largura);
-        icone.setFitHeight(altura);
-        icone.setPreserveRatio(true);
-        icone.setSmooth(true);
+    ImageView icone = new ImageView(
+            new javafx.scene.image.Image(url.toExternalForm())
+    );
 
-        return icone;
-    }
+    icone.setFitWidth(largura);
+    icone.setFitHeight(altura);
+    icone.setPreserveRatio(true);
+    icone.setSmooth(true);
+
+    return icone;
+}
     
     private void atualizarDados() {
         mostrarOverlayAtualizacao(true);
@@ -505,20 +635,12 @@ public class telaInicial extends Application {
         });
 
         tarefa.setOnFailed(event -> {
-            mostrarOverlayAtualizacao(false);
-
             Throwable erro = tarefa.getException();
 
-            mostrarAviso(
-                    "Erro na atualização",
-                    erro == null
-                            ? "Não foi possível atualizar os dados."
-                            : "Não foi possível atualizar os dados:\n" + erro.getMessage()
+            mostrarErro(
+                    "Atualização de dados > recarregar bases e consultar itens preenchidos",
+                    erro
             );
-
-            if (erro != null) {
-                erro.printStackTrace();
-            }
         });
 
         Thread thread = new Thread(tarefa, "AtualizacaoDadosThread");
@@ -571,7 +693,9 @@ public class telaInicial extends Application {
         atualizarButton.setContentDisplay(ContentDisplay.LEFT);
         atualizarButton.setGraphicTextGap(4);
         atualizarButton.getStyleClass().add("botao-acao");
-        atualizarButton.setOnAction(event -> atualizarDados());
+        atualizarButton.setOnAction(event ->
+        	executarComTratamento("Botão ATUALIZAR DADOS", this::atualizarDados)
+        		);
         
         MiniTabelaEstadoBase estadoBaseTabela = new MiniTabelaEstadoBase(estadoCombo, baseEstadoLabel);
 
@@ -580,7 +704,9 @@ public class telaInicial extends Application {
         valorPadraoButton.setContentDisplay(ContentDisplay.LEFT);
         valorPadraoButton.setGraphicTextGap(4);
         valorPadraoButton.getStyleClass().add("botao-busca");
-        valorPadraoButton.setOnAction(event -> abrirTelaBuscaPreco());
+        valorPadraoButton.setOnAction(event ->
+        	executarComTratamento("Botão BUSCAR VALOR PADRÃO", this::abrirTelaBuscaPreco)
+        		);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -617,6 +743,37 @@ public class telaInicial extends Application {
         return false;
     }
     
+    private boolean ordenarTabelaMantendoRodape(TableView<ItemAnalise> tableView) {
+        if (tableView == null || tableView.getItems() == null) {
+            return true;
+        }
+
+        Comparator<ItemAnalise> comparator = tableView.getComparator();
+
+        List<ItemAnalise> linhasNormais = new ArrayList<>();
+        ItemAnalise rodapeEncontrado = null;
+
+        for (ItemAnalise item : tableView.getItems()) {
+            if (isLinhaRodapeTabela(item)) {
+                rodapeEncontrado = item;
+            } else {
+                linhasNormais.add(item);
+            }
+        }
+
+        if (comparator != null) {
+            linhasNormais.sort(comparator);
+        }
+
+        tableView.getItems().setAll(linhasNormais);
+
+        if (rodapeEncontrado != null) {
+            tableView.getItems().add(rodapeEncontrado);
+        }
+
+        return true;
+    }
+    
     @SuppressWarnings("unchecked")
 	private TableView<ItemAnalise> criarTabela() {
         tabela = new TableView<>(itens);
@@ -624,6 +781,7 @@ public class telaInicial extends Application {
         tabela.getStyleClass().add("tabela-analise");
         tabela.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         tabela.setFixedCellSize(ALTURA_LINHA_TABELA);
+        tabela.setSortPolicy(this::ordenarTabelaMantendoRodape);
         
         
         TableColumn<ItemAnalise, String> codigoCol = new TableColumn<>("CÓDIGO");
@@ -778,6 +936,17 @@ public class telaInicial extends Application {
                 basePromobGrupo,
                 analiseAnteriorGrupo
         );
+        
+        registrarOrdemPadraoColunasTabela(
+                codigoCol,
+                descricaoCol,
+                quantidadeCol,
+                valorUnitarioCol,
+                valorTotalCol,
+                baseAtualGrupo,
+                basePromobGrupo,
+                analiseAnteriorGrupo
+        );
 
         tabela.setRowFactory(tv -> {
             TableRow<ItemAnalise> row = new TableRow<>();
@@ -800,10 +969,113 @@ public class telaInicial extends Application {
 
             return row;
         });
-
+        
         return tabela;
     }
 
+    private URL localizarRecurso(String caminhoRelativo) {
+        String caminhoNormal = "/" + caminhoRelativo;
+        String caminhoComResources = "/resources/" + caminhoRelativo;
+
+        URL url = getClass().getResource(caminhoNormal);
+
+        if (url != null) {
+            return url;
+        }
+
+        url = getClass().getResource(caminhoComResources);
+
+        if (url != null) {
+            return url;
+        }
+
+        throw new IllegalStateException(
+                "Recurso não encontrado. Tentativas: "
+                        + caminhoNormal
+                        + " e "
+                        + caminhoComResources
+        );
+    }
+    
+    @SafeVarargs
+    private final void registrarOrdemPadraoColunasTabela(TableColumn<ItemAnalise, ?>... colunas) {
+        ordemPadraoColunasTabela.clear();
+        ordemPadraoColunasTabela.addAll(Arrays.asList(colunas));
+
+        ordemPadraoSubcolunasTabela.clear();
+
+        for (TableColumn<ItemAnalise, ?> coluna : colunas) {
+            registrarOrdemPadraoSubcolunasTabela(coluna);
+        }
+    }
+
+    private void registrarOrdemPadraoSubcolunasTabela(TableColumn<ItemAnalise, ?> coluna) {
+        if (coluna == null || coluna.getColumns().isEmpty()) {
+            return;
+        }
+
+        ordemPadraoSubcolunasTabela.put(
+                coluna,
+                new ArrayList<>(coluna.getColumns())
+        );
+
+        for (TableColumn<ItemAnalise, ?> subcoluna : coluna.getColumns()) {
+            registrarOrdemPadraoSubcolunasTabela(subcoluna);
+        }
+    }
+
+    private void reordenarColunasTabela() {
+        if (tabela == null || ordemPadraoColunasTabela.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<TableColumn<ItemAnalise, ?>, List<TableColumn<ItemAnalise, ?>>> entrada
+                : ordemPadraoSubcolunasTabela.entrySet()) {
+
+            entrada.getKey().getColumns().setAll(entrada.getValue());
+        }
+
+        tabela.getColumns().setAll(ordemPadraoColunasTabela);
+        tabela.refresh();
+    }
+    
+    private void limparTabela() {
+        Alert confirmacao = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmacao.setTitle("Limpar tabela");
+        confirmacao.setHeaderText(null);
+        confirmacao.setContentText("Deseja limpar todos os itens da tabela?");
+
+        if (tabela != null && tabela.getScene() != null) {
+            confirmacao.initOwner(tabela.getScene().getWindow());
+        }
+
+        if (confirmacao.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            return;
+        }
+
+        itens.clear();
+
+        for (int i = 0; i < 5; i++) {
+            itens.add(new ItemAnalise());
+        }
+
+        linhaRodapeTabela.setCodigo(CODIGO_LINHA_RODAPE_TABELA);
+        linhaRodapeTabela.setDescricao("TOTAL");
+        itens.add(linhaRodapeTabela);
+
+        recalcularResumo();
+
+        if (tabela != null) {
+            tabela.getSelectionModel().clearSelection();
+
+            if (tabela.getFocusModel() != null) {
+                tabela.getFocusModel().focus(-1);
+            }
+
+            tabela.refresh();
+        }
+    }
+    
     private HBox criarRodape() {
         HBox rodape = new HBox(12);
         rodape.getStyleClass().add("rodape");
@@ -818,7 +1090,9 @@ public class telaInicial extends Application {
 
         Button adicionarLinha = new Button("+ Adicionar linha");
         adicionarLinha.getStyleClass().add("botao-acao");
-        adicionarLinha.setOnAction(event -> adicionarLinhaVazia());
+        adicionarLinha.setOnAction(event ->
+        	executarComTratamento("Botão ADICIONAR LINHA", this::adicionarLinhaVazia)
+        		);
 
         Button removerLinha = new Button("- Remover linha");
         removerLinha.getStyleClass().add("botao-acao");
@@ -830,7 +1104,8 @@ public class telaInicial extends Application {
                         tabela.getSelectionModel().selectedItemProperty()
                 )
         );
-        removerLinha.setOnAction(event -> {
+        removerLinha.setOnAction(event ->
+        executarComTratamento("Botão REMOVER LINHA", () -> {
             ItemAnalise selecionado = tabela.getSelectionModel().getSelectedItem();
 
             if (selecionado != null && !isLinhaRodapeTabela(selecionado)) {
@@ -838,7 +1113,8 @@ public class telaInicial extends Application {
                 recalcularResumo();
                 tabela.refresh();
             }
-        });
+        })
+);
 
         rodape.getChildren().addAll(ajuda, spacer, adicionarLinha, removerLinha);
         return rodape;
@@ -849,10 +1125,14 @@ public class telaInicial extends Application {
             return;
         }
 
-        item.aplicarDadosItem(itemService.buscarPorCodigo(item.getCodigo()).orElse(null));
-        recalcularItem(item);
-        recalcularResumo();
-        tabela.refresh();
+        String codigo = item.getCodigo();
+
+        executarComTratamento("Busca por código do item: " + codigo, () -> {
+            item.aplicarDadosItem(itemService.buscarPorCodigo(codigo).orElse(null));
+            recalcularItem(item);
+            recalcularResumo();
+            tabela.refresh();
+        });
     }
     
     private record AtualizacaoLinha(int indiceLinha, DadosItem dadosItem) {
@@ -860,16 +1140,18 @@ public class telaInicial extends Application {
     
     
     private void abrirTelaCondicao(ItemAnalise item) {
-        if (item == null || isLinhaRodapeTabela(item)) {
-            return;
-        }
+        executarComTratamento("Abrir tela de condição do item", () -> {
+            if (item == null || isLinhaRodapeTabela(item)) {
+                return;
+            }
 
-        TelaCondicao telaCondicao = new TelaCondicao();
-        boolean alterou = telaCondicao.exibir(tabela.getScene().getWindow(), item);
+            TelaCondicao telaCondicao = new TelaCondicao();
+            boolean alterou = telaCondicao.exibir(tabela.getScene().getWindow(), item);
 
-        if (alterou) {
-            tabela.refresh();
-        }
+            if (alterou) {
+                tabela.refresh();
+            }
+        });
     }
     
     private void aplicarEstiloCondicao(TableCell<ItemAnalise, ?> cell, ItemAnalise item) {
@@ -1038,7 +1320,7 @@ public class telaInicial extends Application {
             campo.setOnAction(event -> confirmarValor());
 
             campo.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-                if (event.isShortcutDown() && event.getCode() == KeyCode.V) {
+                if (isAtalhoColar(event)) {
                     Clipboard clipboard = Clipboard.getSystemClipboard();
 
                     if (!clipboard.hasString()) {
@@ -1047,11 +1329,10 @@ public class telaInicial extends Application {
 
                     String textoColado = clipboard.getString();
 
-                    if (textoTemMultiplasCelulas(textoColado)) {
-                        colarQuantidadesEmLote(textoColado, getIndex());
-                        event.consume();
-                        return;
-                    }
+                    colarQuantidadesEmLote(textoColado, getIndex());
+
+                    event.consume();
+                    return;
                 }
 
                 tratarNavegacaoCampoEditavel(
@@ -1101,6 +1382,10 @@ public class telaInicial extends Application {
 
         private void confirmarValor() {
             ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+            
+            if (colagemEmLoteEmAndamento) {
+                return;
+            }
 
             if (item == null) {
                 return;
@@ -1146,7 +1431,7 @@ public class telaInicial extends Application {
             campo.setOnAction(event -> confirmarValor());
 
             campo.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-                if (event.isShortcutDown() && event.getCode() == KeyCode.V) {
+                if (isAtalhoColar(event)) {
                     Clipboard clipboard = Clipboard.getSystemClipboard();
 
                     if (!clipboard.hasString()) {
@@ -1155,11 +1440,10 @@ public class telaInicial extends Application {
 
                     String textoColado = clipboard.getString();
 
-                    if (textoTemMultiplasCelulas(textoColado)) {
-                        colarValoresUnitariosEmLote(textoColado, getIndex());
-                        event.consume();
-                        return;
-                    }
+                    colarValoresUnitariosEmLote(textoColado, getIndex());
+
+                    event.consume();
+                    return;
                 }
 
                 tratarNavegacaoCampoEditavel(
@@ -1209,6 +1493,10 @@ public class telaInicial extends Application {
 
         private void confirmarValor() {
             ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+            
+            if (colagemEmLoteEmAndamento) {
+                return;
+            }
 
             if (item == null) {
                 return;
@@ -1259,16 +1547,19 @@ public class telaInicial extends Application {
 
         return texto.contains("\n")
                 || texto.contains("\r")
-                || texto.contains("\t");
+                || texto.contains("\t")
+                || texto.contains("\u2028")
+                || texto.contains("\u2029");
     }
 
     private void colarQuantidadesEmLote(String textoColado, int indiceInicial) {
-        List<String> valores = extrairPrimeiraColunaColada(textoColado);
+    List<String> valores = extrairPrimeiraColunaColada(textoColado);
 
-        if (valores.isEmpty()) {
-            return;
-        }
+    if (valores.isEmpty()) {
+        return;
+    }
 
+    executarDuranteColagemEmLote(() -> {
         int indiceLinha = Math.max(indiceInicial, 0);
 
         for (String valorTexto : valores) {
@@ -1284,8 +1575,145 @@ public class telaInicial extends Application {
 
         recalcularResumo();
         tabela.refresh();
+    });
+}
+
+    private boolean isAtalhoColar(KeyEvent event) {
+        return event.getCode() == KeyCode.V
+                && (event.isShortcutDown() || event.isControlDown());
+    }
+    
+    private boolean eventoVeioDeCampoTexto(KeyEvent event) {
+        if (!(event.getTarget() instanceof Node node)) {
+            return false;
+        }
+
+        Node atual = node;
+
+        while (atual != null) {
+            if (atual instanceof TextInputControl) {
+                return true;
+            }
+
+            atual = atual.getParent();
+        }
+
+        return false;
+    }
+    
+    private void tratarColagemGlobalTabela(KeyEvent event) {
+        if (!isAtalhoColar(event)) {
+            return;
+        }
+
+        Node alvo = obterNoEvento(event);
+
+        if (!cliqueFoiDentroDoNo(alvo, tabela)) {
+            return;
+        }
+
+        Clipboard clipboard = Clipboard.getSystemClipboard();
+
+        if (!clipboard.hasString()) {
+            return;
+        }
+
+        String textoColado = clipboard.getString();
+
+        if (textoColado == null || textoColado.isBlank()) {
+            return;
+        }
+
+        int indiceInicial = obterIndiceLinhaColagem(event);
+        String nomeColuna = obterNomeColunaColagem(event);
+
+        event.consume();
+
+        if (COLUNA_QUANTIDADE.equals(nomeColuna)) {
+            colarQuantidadesEmLote(textoColado, indiceInicial);
+            return;
+        }
+
+        if (COLUNA_VALOR_UNITARIO.equals(nomeColuna)) {
+            colarValoresUnitariosEmLote(textoColado, indiceInicial);
+            return;
+        }
+
+        colarCodigosEmLote(textoColado, indiceInicial);
     }
 
+    private Node obterNoEvento(KeyEvent event) {
+        if (event.getTarget() instanceof Node node) {
+            return node;
+        }
+
+        return null;
+    }
+
+    private TableCell<?, ?> obterCelulaDoEvento(KeyEvent event) {
+        Node atual = obterNoEvento(event);
+
+        while (atual != null) {
+            if (atual instanceof TableCell<?, ?> cell && cell.getTableView() == tabela) {
+                return cell;
+            }
+
+            atual = atual.getParent();
+        }
+
+        return null;
+    }
+
+    private int obterIndiceLinhaColagem(KeyEvent event) {
+        TableCell<?, ?> cell = obterCelulaDoEvento(event);
+
+        if (cell != null && cell.getIndex() >= 0) {
+            return cell.getIndex();
+        }
+
+        int indiceInicial = tabela.getFocusModel() == null
+                ? -1
+                : tabela.getFocusModel().getFocusedIndex();
+
+        if (indiceInicial < 0) {
+            indiceInicial = tabela.getSelectionModel().getSelectedIndex();
+        }
+
+        if (indiceInicial < 0) {
+            indiceInicial = 0;
+        }
+
+        return indiceInicial;
+    }
+
+    private String obterNomeColunaColagem(KeyEvent event) {
+        TableCell<?, ?> cell = obterCelulaDoEvento(event);
+
+        if (cell != null && cell.getTableColumn() != null) {
+            return cell.getTableColumn().getText();
+        }
+
+        if (tabela.getFocusModel() != null && tabela.getFocusModel().getFocusedCell() != null) {
+            TableColumn<ItemAnalise, ?> coluna = tabela.getFocusModel().getFocusedCell().getTableColumn();
+
+            if (coluna != null) {
+                return coluna.getText();
+            }
+        }
+
+        return COLUNA_CODIGO;
+    }
+
+    private void executarDuranteColagemEmLote(Runnable acao) {
+        colagemEmLoteEmAndamento = true;
+
+        try {
+            acao.run();
+        } finally {
+            Platform.runLater(() -> colagemEmLoteEmAndamento = false);
+        }
+    }
+    
     private void colarValoresUnitariosEmLote(String textoColado, int indiceInicial) {
         List<String> valores = extrairPrimeiraColunaColada(textoColado);
 
@@ -1293,21 +1721,23 @@ public class telaInicial extends Application {
             return;
         }
 
-        int indiceLinha = Math.max(indiceInicial, 0);
+        executarDuranteColagemEmLote(() -> {
+            int indiceLinha = Math.max(indiceInicial, 0);
 
-        for (String valorTexto : valores) {
-            garantirLinhaExistente(indiceLinha);
+            for (String valorTexto : valores) {
+                garantirLinhaExistente(indiceLinha);
 
-            ItemAnalise item = itens.get(indiceLinha);
-            item.setValorUnitario(converterMoedaColada(valorTexto));
+                ItemAnalise item = itens.get(indiceLinha);
+                item.setValorUnitario(converterMoedaColada(valorTexto));
 
-            recalcularItem(item);
+                recalcularItem(item);
 
-            indiceLinha++;
-        }
+                indiceLinha++;
+            }
 
-        recalcularResumo();
-        tabela.refresh();
+            recalcularResumo();
+            tabela.refresh();
+        });
     }
 
     private List<String> extrairPrimeiraColunaColada(String textoColado) {
@@ -1380,22 +1810,38 @@ public class telaInicial extends Application {
             return;
         }
 
-        int indiceLinha = Math.max(indiceInicial, 0);
+        executarDuranteColagemEmLote(() -> {
+            int indiceLinha = Math.max(indiceInicial, 0);
 
-        for (String codigo : codigos) {
-            garantirLinhaExistente(indiceLinha);
+            for (String codigo : codigos) {
+                garantirLinhaExistente(indiceLinha);
 
-            ItemAnalise item = itens.get(indiceLinha);
-            item.setCodigo(codigo);
+                ItemAnalise item = itens.get(indiceLinha);
 
-            item.aplicarDadosItem(itemService.buscarPorCodigo(codigo).orElse(null));
-            recalcularItem(item);
+                if (isLinhaRodapeTabela(item)) {
+                    garantirLinhaExistente(indiceLinha);
+                    item = itens.get(indiceLinha);
+                }
 
-            indiceLinha++;
-        }
+                item.setCodigo(codigo);
+                item.aplicarDadosItem(itemService.buscarPorCodigo(codigo).orElse(null));
+                recalcularItem(item);
 
-        recalcularResumo();
-        tabela.refresh();
+                indiceLinha++;
+            }
+
+            recalcularResumo();
+
+            if (tabela != null) {
+                tabela.getSelectionModel().clearSelection();
+
+                if (tabela.getFocusModel() != null) {
+                    tabela.getFocusModel().focus(-1);
+                }
+
+                tabela.refresh();
+            }
+        });
     }
 
     private List<String> extrairCodigosColados(String textoColado) {
@@ -1495,20 +1941,12 @@ public class telaInicial extends Application {
         });
 
         tarefa.setOnFailed(event -> {
-            mostrarOverlayAtualizacao(false);
-
             Throwable erro = tarefa.getException();
 
-            mostrarAviso(
-                    "Erro ao carregar bases",
-                    erro == null
-                            ? "Não foi possível carregar as bases ao iniciar o programa."
-                            : "Não foi possível carregar as bases ao iniciar o programa:\n" + erro.getMessage()
+            mostrarErro(
+                    "Inicialização > pré-carregamento das bases",
+                    erro
             );
-
-            if (erro != null) {
-                erro.printStackTrace();
-            }
         });
 
         Thread thread = new Thread(tarefa, "PreCarregamentoBasesThread");
@@ -1526,10 +1964,37 @@ public class telaInicial extends Application {
     }
     
     private class CodigoComBotaoCell extends TableCell<ItemAnalise, String> {
-        private final TextField campoCodigo = new TextField();
+    	private final TextField campoCodigo = new TextField() {
+    	    @Override
+    	    public void paste() {
+    	        colarCodigoPeloCampo();
+    	    }
+    	};
         private final Button botaoOpcoes = new Button();
         private final HBox container = new HBox(2);
 
+        
+        private void colarCodigoPeloCampo() {
+            Clipboard clipboard = Clipboard.getSystemClipboard();
+
+            if (!clipboard.hasString()) {
+                return;
+            }
+
+            String textoColado = clipboard.getString();
+
+            if (textoColado == null || textoColado.isBlank()) {
+                return;
+            }
+
+            int indiceLinha = getTableRow() == null ? getIndex() : getTableRow().getIndex();
+
+            if (indiceLinha < 0) {
+                indiceLinha = getIndex();
+            }
+
+            colarCodigosEmLote(textoColado, indiceLinha);
+        }
         private void atualizarIconeOpcoes(ItemAnalise itemLinha) {
             if (deveUsarIconeBranco(itemLinha)) {
                 botaoOpcoes.setGraphic(carregarIcone("item-opcoes-branco.png", 10, 16));
@@ -1594,22 +2059,6 @@ public class telaInicial extends Application {
             campoCodigo.setOnAction(event -> confirmarCodigo());
             
             campoCodigo.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-                if (event.isShortcutDown() && event.getCode() == KeyCode.V) {
-                    Clipboard clipboard = Clipboard.getSystemClipboard();
-
-                    if (!clipboard.hasString()) {
-                        return;
-                    }
-
-                    String textoColado = clipboard.getString();
-
-                    if (textoTemMultiplasCelulas(textoColado)) {
-                        colarCodigosEmLote(textoColado, getIndex());
-                        event.consume();
-                        return;
-                    }
-                }
-
                 tratarNavegacaoCampoEditavel(
                         event,
                         getIndex(),
@@ -1668,6 +2117,10 @@ public class telaInicial extends Application {
 
         private void confirmarCodigo() {
             ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+            
+            if (colagemEmLoteEmAndamento) {
+                return;
+            }
 
             if (item == null) {
                 return;
@@ -1683,65 +2136,70 @@ public class telaInicial extends Application {
     }
         
     private void abrirTelaBuscaPreco() {
-    List<ItemAnalise> itensParaBuscarPreco = new ArrayList<>();
+        executarComTratamento("Abrir tela BUSCAR VALOR PADRÃO", () -> {
+            List<ItemAnalise> itensParaBuscarPreco = new ArrayList<>();
 
-    for (ItemAnalise item : itens) {
-        if (item == null || isLinhaRodapeTabela(item)) {
-            continue;
-        }
+            for (ItemAnalise item : itens) {
+                if (item == null || isLinhaRodapeTabela(item)) {
+                    continue;
+                }
 
-        if (!temCodigoPreenchido(item)) {
-            continue;
-        }
+                if (!temCodigoPreenchido(item)) {
+                    continue;
+                }
 
-        itensParaBuscarPreco.add(item);
+                itensParaBuscarPreco.add(item);
+            }
+
+            if (itensParaBuscarPreco.isEmpty()) {
+                mostrarAviso(
+                        "Buscar preço",
+                        "Não há itens com código preenchido para buscar preço."
+                );
+                return;
+            }
+
+            TelaBuscaPreco telaBuscaPreco = new TelaBuscaPreco();
+            boolean carregou = telaBuscaPreco.exibir(
+                    tabela.getScene().getWindow(),
+                    itensParaBuscarPreco,
+                    itemService
+            );
+
+            if (!carregou) {
+                return;
+            }
+
+            for (ItemAnalise item : itensParaBuscarPreco) {
+                recalcularItem(item);
+            }
+
+            recalcularResumo();
+            tabela.refresh();
+        });
     }
-
-    if (itensParaBuscarPreco.isEmpty()) {
-        mostrarAviso(
-                "Buscar preço",
-                "Não há itens com código preenchido para buscar preço."
-        );
-        return;
-    }
-
-    TelaBuscaPreco telaBuscaPreco = new TelaBuscaPreco();
-    boolean carregou = telaBuscaPreco.exibir(
-            tabela.getScene().getWindow(),
-            itensParaBuscarPreco,
-            itemService
-    );
-
-    if (!carregou) {
-        return;
-    }
-
-    for (ItemAnalise item : itensParaBuscarPreco) {
-        recalcularItem(item);
-    }
-
-    recalcularResumo();
-    tabela.refresh();
-}
     
-    private double calcularAlturaTabela(BorderPane root, VBox topo, HBox rodape) {
-        int quantidadeLinhas = Math.max(itens.size(), 1);
+        private double calcularAlturaTabela(BorderPane root, VBox topo, HBox rodape, HBox barraAcoesTabela) {
+            int quantidadeLinhas = Math.max(itens.size(), 1);
 
-        double alturaDesejada = ALTURA_CABECALHO_TABELA
-                + quantidadeLinhas * ALTURA_LINHA_TABELA
-                + ALTURA_BARRA_HORIZONTAL;
+            double alturaDesejada = ALTURA_CABECALHO_TABELA
+                    + quantidadeLinhas * ALTURA_LINHA_TABELA
+                    + ALTURA_BARRA_HORIZONTAL;
 
-        double alturaDisponivel = root.getHeight()
-                - topo.getHeight()
-                - rodape.getHeight()
-                - MARGEM_SEGURANCA_TABELA;
+            double alturaBarraAcoes = barraAcoesTabela == null ? 0 : barraAcoesTabela.getHeight();
 
-        if (alturaDisponivel <= 0) {
-            return alturaDesejada;
+            double alturaDisponivel = root.getHeight()
+                    - topo.getHeight()
+                    - rodape.getHeight()
+                    - alturaBarraAcoes
+                    - MARGEM_SEGURANCA_TABELA;
+
+            if (alturaDisponivel <= 0) {
+                return alturaDesejada;
+            }
+
+            return Math.min(alturaDesejada, alturaDisponivel);
         }
-
-        return Math.min(alturaDesejada, alturaDisponivel);
-    }
     
     private class BigDecimalTableCell extends TableCell<ItemAnalise, BigDecimal> {
         private final boolean moeda;

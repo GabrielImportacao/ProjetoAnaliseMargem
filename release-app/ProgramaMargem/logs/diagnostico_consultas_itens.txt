@@ -1,0 +1,180 @@
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.773935900
+Status: Consulta OK.
+Código pesquisado: MMR1537.1205
+Código retornado: MMR1537.1205
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN020 - 3/4P NPT
+Preço padrão venda: 251.3510
+IPI: 3.25
+Custo atual: 42.45
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.774438900
+Status: Consulta OK.
+Código pesquisado: MMR1537.1206
+Código retornado: MMR1537.1206
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN025 - 1P NPT
+Preço padrão venda: 339.2830
+IPI: 3.25
+Custo atual: 61.34
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.776941700
+Status: Consulta OK.
+Código pesquisado: MMR1537.1207
+Código retornado: MMR1537.1207
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN032 - 1.1/4P NPT
+Preço padrão venda: 477.470
+IPI: 3.25
+Custo atual: 155.35
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.777939100
+Status: Consulta OK.
+Código pesquisado: MMR1537.1208
+Código retornado: MMR1537.1208
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN040 - 1.1/2P NPT
+Preço padrão venda: 712.3670
+IPI: 3.25
+Custo atual: 84.5578
+Registro custo atual: CBP - 310725
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.777939100
+Status: Consulta OK.
+Código pesquisado: MMR1537.1209
+Código retornado: MMR1537.1209
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN050 - 2P NPT
+Preço padrão venda: 929.0430
+IPI: 3.25
+Custo atual: 144.65
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.778936600
+Status: Consulta OK.
+Código pesquisado: MMR1537.1210
+Código retornado: MMR1537.1210
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN065 - 2.1/2P NPT
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.778936600
+Status: Consulta OK.
+Código pesquisado: MMR1537.1211
+Código retornado: MMR1537.1211
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN080 - 3P NPT
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.778936600
+Status: Consulta OK.
+Código pesquisado: MMR1537.1212
+Código retornado: MMR1537.1212
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN100 - 4P NPT
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.779933800
+Status: Consulta OK.
+Código pesquisado: MMR1537.1302
+Código retornado: MMR1537.1302
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN008 - 1/4P SW
+Preço padrão venda: 186.8270
+IPI: 3.25
+Custo atual: 24.5744
+Registro custo atual: CBP - 310725
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-19T15:49:30.779933800
+Status: Consulta OK.
+Código pesquisado: MMR1537.1303
+Código retornado: MMR1537.1303
+Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN010 - 3/8P SW
+Preço padrão venda: 186.8270
+IPI: 3.25
+Custo atual: 24.574
+Registro custo atual: CBP - 310725
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null

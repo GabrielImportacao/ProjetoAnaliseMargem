@@ -46,8 +46,15 @@ public void recalcular(ItemAnalise item, BigDecimal percentualBaseEstado) {
             percentualBaseEstado
     );
 
-    item.setVariacaoAtual(calcularVariacao(valorUnitario, precoComparacaoAtual));
-    item.setVariacaoAnterior(calcularVariacao(valorUnitario, precoComparacaoAtual));
+    BigDecimal precoBaseArredondadoParaVariacao = arredondarMoeda(item.getPrecoPadraoVenda());
+
+    BigDecimal precoComparacaoParaVariacao = calcularPrecoComDescontoEstado(
+            precoBaseArredondadoParaVariacao,
+            percentualBaseEstado
+    );
+
+    item.setVariacaoAtual(calcularVariacao(valorUnitario, precoComparacaoParaVariacao));
+    item.setVariacaoAnterior(calcularVariacao(valorUnitario, precoComparacaoParaVariacao));
 
     item.setMargemAtual(calcularMargem(item.getCustoAtual(), valorUnitario));
     item.setMargemPromob(calcularMargem(item.getCustoPromob(), valorUnitario));
@@ -77,19 +84,19 @@ public void recalcular(ItemAnalise item, BigDecimal percentualBaseEstado) {
     }
 
     private BigDecimal calcularVariacao(BigDecimal valorUnitario, BigDecimal precoReferencia) {
-        BigDecimal valorSeguro = valorSeguro(valorUnitario);
-        BigDecimal referenciaSeguro = valorSeguro(precoReferencia);
+    BigDecimal valorSeguro = valorSeguro(valorUnitario);
+    BigDecimal referenciaSeguro = valorSeguro(precoReferencia);
 
-        if (valorSeguro.compareTo(BigDecimal.ZERO) <= 0 || referenciaSeguro.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-
-        return valorSeguro
-                .divide(referenciaSeguro, 6, RoundingMode.HALF_UP)
-                .subtract(BigDecimal.ONE)
-                .multiply(new BigDecimal("100"))
-                .setScale(2, RoundingMode.HALF_UP);
+    if (valorSeguro.compareTo(BigDecimal.ZERO) <= 0 || referenciaSeguro.compareTo(BigDecimal.ZERO) <= 0) {
+        return BigDecimal.ZERO;
     }
+
+    return valorSeguro
+            .divide(referenciaSeguro, 6, RoundingMode.HALF_UP)
+            .subtract(BigDecimal.ONE)
+            .multiply(new BigDecimal("100"))
+            .setScale(2, RoundingMode.HALF_UP);
+}
 
     private BigDecimal calcularIpi(BigDecimal valorBase, BigDecimal percentualIpi) {
         BigDecimal valorSeguro = valorSeguro(valorBase);
@@ -102,6 +109,11 @@ public void recalcular(ItemAnalise item, BigDecimal percentualBaseEstado) {
         return valorSeguro
                 .multiply(ipiSeguro)
                 .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+    }
+    
+    
+    private BigDecimal arredondarMoeda(BigDecimal valor) {
+        return valorSeguro(valor).setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal valorSeguro(BigDecimal valor) {

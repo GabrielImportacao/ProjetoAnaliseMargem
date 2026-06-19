@@ -12,6 +12,39 @@
     -fx-background-color: #BFBFBF;
 }
 
+.tabela-analise .column-header .arrow {
+    -fx-background-color: white;
+}
+
+.tabela-analise .column-header .sort-order-dot {
+    -fx-background-color: white;
+}
+
+.barra-acoes-tabela {
+    -fx-background-color: transparent;
+}
+
+.botao-icone-tabela {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 15;
+    -fx-border-radius: 15;
+    -fx-padding: 3;
+}
+
+.botao-icone-tabela:hover {
+    -fx-background-color: #AFAFAF;
+}
+
+.botao-icone-tabela:pressed {
+    -fx-background-color: #969696;
+}
+
+.tabela-analise .column-header .sort-order {
+    -fx-text-fill: white;
+    -fx-fill: white;
+}
+
 .rodape-tabela {
     -fx-background-color: #e6e6e6;
     -fx-border-color: #555555;

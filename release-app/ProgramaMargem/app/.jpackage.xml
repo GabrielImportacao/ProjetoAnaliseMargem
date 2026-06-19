@@ -1,0 +1,5 @@
+<?xml version="1.0" ?>
+<jpackage-state version="25.0.2" platform="windows">
+  <app-version>1.0.0</app-version>
+  <main-launcher>ProgramaMargem</main-launcher>
+  <main-class>Visao.telaInicial</main-class></jpackage-state>

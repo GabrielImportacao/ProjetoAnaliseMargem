@@ -25,7 +25,6 @@ public class ItemRepositoryXlsb implements ItemRepository {
 
     public void preCarregarCache() {
         carregarCacheSeNecessario();
-        limparCache();
     }
         
     public ItemRepositoryXlsb() {

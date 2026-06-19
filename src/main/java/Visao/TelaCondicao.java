@@ -2,6 +2,7 @@ package Visao;
 
 import Modelo.CondicaoVenda;
 import Modelo.ItemAnalise;
+import Visao.componentes.BotaoPadrao;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -117,6 +118,8 @@ public class TelaCondicao {
             confirmou[0] = true;
             stage.close();
         });
+        BotaoPadrao.aplicar(cancelarButton, 100);
+        BotaoPadrao.aplicar(okButton, 86);
 
         botoes.getChildren().addAll(cancelarButton, okButton);
 
