@@ -40,7 +40,7 @@ jpackage ^
 --main-class "Visao.telaInicial" ^
 --dest "release-app" ^
 --module-path "%JAVAFX_JMODS%" ^
---add-modules javafx.controls,javafx.fxml ^
+--add-modules javafx.controls,javafx.fxml,java.sql ^
 --java-options "--enable-native-access=javafx.graphics" ^
 --win-console ^
 --app-version "1.0.0" ^

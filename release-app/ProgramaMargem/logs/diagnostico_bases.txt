@@ -1,5 +1,5 @@
 ===== DIAGNOSTICO DE BASES =====
-Data/Hora: 2026-06-19T15:49:26.795100300
+Data/Hora: 2026-06-23T15:19:57.729586600
 user.dir: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem\release-app\ProgramaMargem
 user.home: C:\Users\import3
 java.version: 25.0.2
@@ -44,5 +44,5 @@ EXISTE: true
 PODE LER: true
 PODE ESCREVER: true
 TAMANHO BYTES: 356352
-ÚLTIMA MODIFICAÇÃO: 2026-06-19T12:19:58.3937503Z
+ÚLTIMA MODIFICAÇÃO: 2026-06-23T11:12:24.6455728Z
 

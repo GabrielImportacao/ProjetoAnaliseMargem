@@ -1,100 +1,100 @@
 
 =================================================
-Data/Hora: 2026-06-19T15:49:30.773935900
+Data/Hora: 2026-06-23T14:01:10.028174200
 Status: Consulta OK.
-Código pesquisado: MMR1537.1205
-Código retornado: MMR1537.1205
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN020 - 3/4P NPT
-Preço padrão venda: 251.3510
+Código pesquisado: MMR1814.1031
+Código retornado: MMR1814.1031
+Descrição: REDUCAO CONCENTRICA OD PI/PE 304 - 31 - 63,50 2.1/2P X 50,80 2P
+Preço padrão venda: 99.7716
 IPI: 3.25
-Custo atual: 42.45
+Custo atual: 17.066711055392403
+Registro custo atual: RPLA172-25
+Data custo atual: 2026-03-12
+Custo anterior: 12.726799999999999
+Registro custo anterior: RPLA252-25
+Data custo anterior: 2026-01-22
+Custo Promob: 13.2621
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-12-12
+
+=================================================
+Data/Hora: 2026-06-23T14:01:10.029171400
+Status: Consulta OK.
+Código pesquisado: MRT3803.0801
+Código retornado: MRT3803.0801
+Descrição: MONITOR DE POSICAO APL210 PARA ATUADOR PNEUMATICO
+Preço padrão venda: 300.0364
+IPI: 0
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 63.301
+Registro custo Promob: PROMOB
+Data custo Promob: 2026-06-12
+
+=================================================
+Data/Hora: 2026-06-23T14:01:10.030169600
+Status: Consulta OK.
+Código pesquisado: MMP0201.1004
+Código retornado: MMP0201.1004
+Descrição: ANEL WAFER MAIOR INOX 304 DN015-1/2 P ASTM A351 GR. CF8 M862
+Preço padrão venda: 0
+IPI: 0
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-23T14:01:10.030169600
+Status: Consulta OK.
+Código pesquisado: MPR3423.1504
+Código retornado: MPR3423.1504
+Descrição: ADAPTADOR TIPO N/MACHO BSP - 1TC 304  - 04 - 12,70(1/2P)
+Preço padrão venda: 174.62
+IPI: 3.25
+Custo atual: 54.4319
+Registro custo atual: CCA - 210825
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-23T14:02:33.108703300
+Status: Consulta OK.
+Código pesquisado: MMR1822.1415
+Código retornado: MMR1822.1415
+Descrição: NIPLE SMS 304 - 15 - 203,20 8P
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 125.84
 Registro custo atual: CFB - 080525
 Data custo atual: null
 Custo anterior: 0
 Registro custo anterior: 
 Data custo anterior: null
-Custo Promob: 0
-Registro custo Promob: 
-Data custo Promob: null
+Custo Promob: 69.103
+Registro custo Promob: PROMOB
+Data custo Promob: 2021-04-16
 
 =================================================
-Data/Hora: 2026-06-19T15:49:30.774438900
+Data/Hora: 2026-06-23T14:02:33.109701
 Status: Consulta OK.
-Código pesquisado: MMR1537.1206
-Código retornado: MMR1537.1206
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN025 - 1P NPT
-Preço padrão venda: 339.2830
-IPI: 3.25
-Custo atual: 61.34
-Registro custo atual: CFB - 080525
-Data custo atual: null
-Custo anterior: 0
-Registro custo anterior: 
-Data custo anterior: null
-Custo Promob: 0
-Registro custo Promob: 
-Data custo Promob: null
-
-=================================================
-Data/Hora: 2026-06-19T15:49:30.776941700
-Status: Consulta OK.
-Código pesquisado: MMR1537.1207
-Código retornado: MMR1537.1207
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN032 - 1.1/4P NPT
-Preço padrão venda: 477.470
-IPI: 3.25
-Custo atual: 155.35
-Registro custo atual: CFB - 080525
-Data custo atual: null
-Custo anterior: 0
-Registro custo anterior: 
-Data custo anterior: null
-Custo Promob: 0
-Registro custo Promob: 
-Data custo Promob: null
-
-=================================================
-Data/Hora: 2026-06-19T15:49:30.777939100
-Status: Consulta OK.
-Código pesquisado: MMR1537.1208
-Código retornado: MMR1537.1208
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN040 - 1.1/2P NPT
-Preço padrão venda: 712.3670
-IPI: 3.25
-Custo atual: 84.5578
-Registro custo atual: CBP - 310725
-Data custo atual: null
-Custo anterior: 0
-Registro custo anterior: 
-Data custo anterior: null
-Custo Promob: 0
-Registro custo Promob: 
-Data custo Promob: null
-
-=================================================
-Data/Hora: 2026-06-19T15:49:30.777939100
-Status: Consulta OK.
-Código pesquisado: MMR1537.1209
-Código retornado: MMR1537.1209
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN050 - 2P NPT
-Preço padrão venda: 929.0430
-IPI: 3.25
-Custo atual: 144.65
-Registro custo atual: CFB - 080525
-Data custo atual: null
-Custo anterior: 0
-Registro custo anterior: 
-Data custo anterior: null
-Custo Promob: 0
-Registro custo Promob: 
-Data custo Promob: null
-
-=================================================
-Data/Hora: 2026-06-19T15:49:30.778936600
-Status: Consulta OK.
-Código pesquisado: MMR1537.1210
-Código retornado: MMR1537.1210
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN065 - 2.1/2P NPT
+Código pesquisado: MMR1822.1416
+Código retornado: MMR1822.1416
+Descrição: NIPLE SMS 304 - 16 - 254,00 10P
 Preço padrão venda: 0
 IPI: 3.25
 Custo atual: 0
@@ -108,11 +108,11 @@ Registro custo Promob:
 Data custo Promob: null
 
 =================================================
-Data/Hora: 2026-06-19T15:49:30.778936600
+Data/Hora: 2026-06-23T14:02:33.109701
 Status: Consulta OK.
-Código pesquisado: MMR1537.1211
-Código retornado: MMR1537.1211
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN080 - 3P NPT
+Código pesquisado: MMR1822.1417
+Código retornado: MMR1822.1417
+Descrição: NIPLE SMS 304 - 17 - 304,80 12P
 Preço padrão venda: 0
 IPI: 3.25
 Custo atual: 0
@@ -126,11 +126,65 @@ Registro custo Promob:
 Data custo Promob: null
 
 =================================================
-Data/Hora: 2026-06-19T15:49:30.778936600
+Data/Hora: 2026-06-23T14:02:33.110698300
 Status: Consulta OK.
-Código pesquisado: MMR1537.1212
-Código retornado: MMR1537.1212
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN100 - 4P NPT
+Código pesquisado: MMR1822.1504
+Código retornado: MMR1822.1504
+Descrição: TC NIPLE LONGO 304 - 04 - 12,70 1/2P X 21,5MM
+Preço padrão venda: 18.378
+IPI: 3.25
+Custo atual: 4.07
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 3.3202
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-07-16
+
+=================================================
+Data/Hora: 2026-06-23T14:02:33.110698300
+Status: Consulta OK.
+Código pesquisado: MMR1822.1505
+Código retornado: MMR1822.1505
+Descrição: TC NIPLE LONGO 304 - 05 - 19,05 3/4P X 21,5MM
+Preço padrão venda: 18.378
+IPI: 3.25
+Custo atual: 4.07
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 3.5974
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-09-23
+
+=================================================
+Data/Hora: 2026-06-23T14:02:58.466067200
+Status: Consulta OK.
+Código pesquisado: MMR1822.1415
+Código retornado: MMR1822.1415
+Descrição: NIPLE SMS 304 - 15 - 203,20 8P
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 125.84
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 69.103
+Registro custo Promob: PROMOB
+Data custo Promob: 2021-04-16
+
+=================================================
+Data/Hora: 2026-06-23T14:02:58.468063500
+Status: Consulta OK.
+Código pesquisado: MMR1822.1416
+Código retornado: MMR1822.1416
+Descrição: NIPLE SMS 304 - 16 - 254,00 10P
 Preço padrão venda: 0
 IPI: 3.25
 Custo atual: 0
@@ -144,15 +198,15 @@ Registro custo Promob:
 Data custo Promob: null
 
 =================================================
-Data/Hora: 2026-06-19T15:49:30.779933800
+Data/Hora: 2026-06-23T14:02:58.468063500
 Status: Consulta OK.
-Código pesquisado: MMR1537.1302
-Código retornado: MMR1537.1302
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN008 - 1/4P SW
-Preço padrão venda: 186.8270
+Código pesquisado: MMR1822.1417
+Código retornado: MMR1822.1417
+Descrição: NIPLE SMS 304 - 17 - 304,80 12P
+Preço padrão venda: 0
 IPI: 3.25
-Custo atual: 24.5744
-Registro custo atual: CBP - 310725
+Custo atual: 0
+Registro custo atual: 
 Data custo atual: null
 Custo anterior: 0
 Registro custo anterior: 
@@ -162,15 +216,87 @@ Registro custo Promob:
 Data custo Promob: null
 
 =================================================
-Data/Hora: 2026-06-19T15:49:30.779933800
+Data/Hora: 2026-06-23T14:02:58.469060700
 Status: Consulta OK.
-Código pesquisado: MMR1537.1303
-Código retornado: MMR1537.1303
-Descrição: UNIAO FF A.CONICO 3000LBS ASTM A182 - F304 DN010 - 3/8P SW
-Preço padrão venda: 186.8270
+Código pesquisado: MMR1822.1504
+Código retornado: MMR1822.1504
+Descrição: TC NIPLE LONGO 304 - 04 - 12,70 1/2P X 21,5MM
+Preço padrão venda: 18.378
 IPI: 3.25
-Custo atual: 24.574
-Registro custo atual: CBP - 310725
+Custo atual: 4.07
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 3.3202
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-07-16
+
+=================================================
+Data/Hora: 2026-06-23T14:02:58.470058100
+Status: Consulta OK.
+Código pesquisado: MMR1822.1505
+Código retornado: MMR1822.1505
+Descrição: TC NIPLE LONGO 304 - 05 - 19,05 3/4P X 21,5MM
+Preço padrão venda: 18.378
+IPI: 3.25
+Custo atual: 4.07
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 3.5974
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-09-23
+
+=================================================
+Data/Hora: 2026-06-23T15:11:03.042079800
+Status: Consulta OK.
+Código pesquisado: MMR1814.1031
+Código retornado: MMR1814.1031
+Descrição: REDUCAO CONCENTRICA OD PI/PE 304 - 31 - 63,50 2.1/2P X 50,80 2P
+Preço padrão venda: 99.7716
+IPI: 3.25
+Custo atual: 17.066711055392403
+Registro custo atual: RPLA172-25
+Data custo atual: 2026-03-12
+Custo anterior: 12.726799999999999
+Registro custo anterior: RPLA252-25
+Data custo anterior: 2026-01-22
+Custo Promob: 13.2621
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-12-12
+
+=================================================
+Data/Hora: 2026-06-23T15:11:03.043076500
+Status: Consulta OK.
+Código pesquisado: MRT3803.0801
+Código retornado: MRT3803.0801
+Descrição: MONITOR DE POSICAO APL210 PARA ATUADOR PNEUMATICO
+Preço padrão venda: 300.0364
+IPI: 0
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 63.301
+Registro custo Promob: PROMOB
+Data custo Promob: 2026-06-12
+
+=================================================
+Data/Hora: 2026-06-23T15:11:03.044074800
+Status: Consulta OK.
+Código pesquisado: MMP0201.1004
+Código retornado: MMP0201.1004
+Descrição: ANEL WAFER MAIOR INOX 304 DN015-1/2 P ASTM A351 GR. CF8 M862
+Preço padrão venda: 0
+IPI: 0
+Custo atual: 0
+Registro custo atual: 
 Data custo atual: null
 Custo anterior: 0
 Registro custo anterior: 
@@ -178,3 +304,255 @@ Data custo anterior: null
 Custo Promob: 0
 Registro custo Promob: 
 Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-23T15:11:03.044074800
+Status: Consulta OK.
+Código pesquisado: MPR3423.1504
+Código retornado: MPR3423.1504
+Descrição: ADAPTADOR TIPO N/MACHO BSP - 1TC 304  - 04 - 12,70(1/2P)
+Preço padrão venda: 174.62
+IPI: 3.25
+Custo atual: 54.4319
+Registro custo atual: CCA - 210825
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-23T15:11:14.397048700
+Status: Consulta OK.
+Código pesquisado: MMR1822.1415
+Código retornado: MMR1822.1415
+Descrição: NIPLE SMS 304 - 15 - 203,20 8P
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 125.84
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 69.103
+Registro custo Promob: PROMOB
+Data custo Promob: 2021-04-16
+
+=================================================
+Data/Hora: 2026-06-23T15:11:14.398046200
+Status: Consulta OK.
+Código pesquisado: MMR1822.1416
+Código retornado: MMR1822.1416
+Descrição: NIPLE SMS 304 - 16 - 254,00 10P
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-23T15:11:14.398046200
+Status: Consulta OK.
+Código pesquisado: MMR1822.1417
+Código retornado: MMR1822.1417
+Descrição: NIPLE SMS 304 - 17 - 304,80 12P
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-23T15:11:14.399043400
+Status: Consulta OK.
+Código pesquisado: MMR1822.1504
+Código retornado: MMR1822.1504
+Descrição: TC NIPLE LONGO 304 - 04 - 12,70 1/2P X 21,5MM
+Preço padrão venda: 18.378
+IPI: 3.25
+Custo atual: 4.07
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 3.3202
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-07-16
+
+=================================================
+Data/Hora: 2026-06-23T15:20:00.609812600
+Status: Consulta OK.
+Código pesquisado: MMR1814.1031
+Código retornado: MMR1814.1031
+Descrição: REDUCAO CONCENTRICA OD PI/PE 304 - 31 - 63,50 2.1/2P X 50,80 2P
+Preço padrão venda: 99.7716
+IPI: 3.25
+Custo atual: 17.066711055392403
+Registro custo atual: RPLA172-25
+Data custo atual: 2026-03-12
+Custo anterior: 12.726799999999999
+Registro custo anterior: RPLA252-25
+Data custo anterior: 2026-01-22
+Custo Promob: 13.2621
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-12-12
+
+=================================================
+Data/Hora: 2026-06-23T15:20:00.610809100
+Status: Consulta OK.
+Código pesquisado: MRT3803.0801
+Código retornado: MRT3803.0801
+Descrição: MONITOR DE POSICAO APL210 PARA ATUADOR PNEUMATICO
+Preço padrão venda: 300.0364
+IPI: 0
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 63.301
+Registro custo Promob: PROMOB
+Data custo Promob: 2026-06-12
+
+=================================================
+Data/Hora: 2026-06-23T15:20:00.611807
+Status: Consulta OK.
+Código pesquisado: MMP0201.1004
+Código retornado: MMP0201.1004
+Descrição: ANEL WAFER MAIOR INOX 304 DN015-1/2 P ASTM A351 GR. CF8 M862
+Preço padrão venda: 0
+IPI: 0
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-23T15:20:00.612803700
+Status: Consulta OK.
+Código pesquisado: MPR3423.1504
+Código retornado: MPR3423.1504
+Descrição: ADAPTADOR TIPO N/MACHO BSP - 1TC 304  - 04 - 12,70(1/2P)
+Preço padrão venda: 174.62
+IPI: 3.25
+Custo atual: 54.4319
+Registro custo atual: CCA - 210825
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-06-23T15:20:06.291893500
+Status: Consulta OK.
+Código pesquisado: MMR1822.1415
+Código retornado: MMR1822.1415
+Descrição: NIPLE SMS 304 - 15 - 203,20 8P
+Preço padrão venda: 0
+IPI: 3.25
+Custo atual: 125.84
+Registro custo atual: CFB - 080525
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 69.103
+Registro custo Promob: PROMOB
+Data custo Promob: 2021-04-16
+
+=================================================
+Data/Hora: 2026-06-23T15:20:55.104284300
+Status: Consulta OK.
+Código pesquisado: MMR1821.3712
+Código retornado: MMR1821.3712
+Descrição: MACHO DIN 316L  - 12 - 101,60(4P)
+Preço padrão venda: 231.18
+IPI: 3.25
+Custo atual: 41.976800000000004
+Registro custo atual: RPLA444-25
+Data custo atual: 2026-06-09
+Custo anterior: 69.063957995665518
+Registro custo anterior: RPLA233-22
+Data custo anterior: 2025-07-25
+Custo Promob: 42.2695
+Registro custo Promob: PROMOB
+Data custo Promob: 2026-05-26
+
+=================================================
+Data/Hora: 2026-06-23T15:23:09.527900
+Status: Consulta OK.
+Código pesquisado: MMR1801.1006
+Código retornado: MMR1801.1006
+Descrição: CURVA 90RL OD PI/PE 304 - 06 - 25,40 1P
+Preço padrão venda: 28.3128
+IPI: 3.25
+Custo atual: 5.9296999999999995
+Registro custo atual: RPLA431-25
+Data custo atual: 2026-05-12
+Custo anterior: 7.043
+Registro custo anterior: RPLA252-25
+Data custo anterior: 2026-01-22
+Custo Promob: 6.4793
+Registro custo Promob: PROMOB
+Data custo Promob: 2026-05-03
+
+=================================================
+Data/Hora: 2026-06-23T15:24:18.059901100
+Status: Consulta OK.
+Código pesquisado: MMR1801.1006
+Código retornado: MMR1801.1006
+Descrição: CURVA 90RL OD PI/PE 304 - 06 - 25,40 1P
+Preço padrão venda: 28.3128
+IPI: 3.25
+Custo atual: 5.9296999999999995
+Registro custo atual: RPLA431-25
+Data custo atual: 2026-05-12
+Custo anterior: 7.043
+Registro custo anterior: RPLA252-25
+Data custo anterior: 2026-01-22
+Custo Promob: 6.4793
+Registro custo Promob: PROMOB
+Data custo Promob: 2026-05-03
+
+=================================================
+Data/Hora: 2026-06-23T15:26:20.498037300
+Status: Consulta OK.
+Código pesquisado: MMR1801.1006
+Código retornado: MMR1801.1006
+Descrição: CURVA 90RL OD PI/PE 304 - 06 - 25,40 1P
+Preço padrão venda: 28.3128
+IPI: 3.25
+Custo atual: 5.9296999999999995
+Registro custo atual: RPLA431-25
+Data custo atual: 2026-05-12
+Custo anterior: 7.043
+Registro custo anterior: RPLA252-25
+Data custo anterior: 2026-01-22
+Custo Promob: 6.4793
+Registro custo Promob: PROMOB
+Data custo Promob: 2026-05-03
