@@ -4,6 +4,110 @@
     -fx-font-size: 12px;
 }
 
+.tabela-analise .table-row-cell:filled:even:selected,
+.tabela-analise .table-row-cell:filled:even:selected .table-cell {
+    -fx-background-color: #D0D0D0;
+    -fx-text-fill: #000000;
+}
+
+.tabela-analise .table-row-cell:filled:odd:selected,
+.tabela-analise .table-row-cell:filled:odd:selected .table-cell {
+    -fx-background-color: #BEBEBE;
+    -fx-text-fill: #000000;
+}
+
+.tabela-analise .table-row-cell:filled:selected .text {
+    -fx-fill: #000000;
+}
+
+.botao-ok-encalhado {
+    -fx-background-color: #F2F2F2;
+    -fx-border-color: #555555;
+    -fx-border-width: 1.5;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 1 5 1 5;
+}
+
+.botao-ok-encalhado:hover {
+    -fx-background-color: #E0DED5;
+    -fx-border-color: #333333;
+    -fx-text-fill: #333333;
+}
+
+.botao-ok-encalhado:pressed {
+    -fx-background-color: #D0CDC3;
+}
+
+.tabela-analise .table-row-cell:item-encalhado,
+.tabela-analise .table-row-cell:item-encalhado .table-cell {
+    -fx-background-color: #FFC7CE;
+    -fx-text-fill: #9C0006;
+    -fx-font-weight: bold;
+}
+
+.tabela-analise .table-row-cell:item-encalhado:selected,
+.tabela-analise .table-row-cell:item-encalhado:selected .table-cell {
+    -fx-background-color: #F4A3A8;
+    -fx-text-fill: #9C0006;
+    -fx-font-weight: bold;
+}
+
+.tabela-analise .table-row-cell:item-encalhado .text,
+.tabela-analise .table-row-cell:item-encalhado:selected .text {
+    -fx-fill: #9C0006;
+}
+
+.scroll-config-estados {
+    -fx-background-color: #C7C4BA;
+    -fx-background: #C7C4BA;
+}
+
+.scroll-config-estados > .viewport {
+    -fx-background-color: #C7C4BA;
+}
+
+.scroll-config-estados .scroll-bar:vertical {
+    -fx-background-color: #C7C4BA;
+    -fx-pref-width: 13px;
+    -fx-padding: 2px;
+}
+
+.scroll-config-estados .scroll-bar:vertical .track {
+    -fx-background-color: #DCDAD2;
+    -fx-background-radius: 3px;
+    -fx-border-color: #8A8A8A;
+    -fx-border-width: 1px;
+    -fx-border-radius: 3px;
+}
+
+.scroll-config-estados .scroll-bar:vertical .thumb {
+    -fx-background-color: #555555;
+    -fx-background-radius: 3px;
+}
+
+.scroll-config-estados .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #444444;
+}
+
+.scroll-config-estados .scroll-bar:vertical .thumb:pressed {
+    -fx-background-color: #333333;
+}
+
+.scroll-config-estados .scroll-bar:vertical .increment-button,
+.scroll-config-estados .scroll-bar:vertical .decrement-button {
+    -fx-background-color: #C7C4BA;
+    -fx-padding: 2px;
+}
+
+.scroll-config-estados .scroll-bar:vertical .increment-arrow,
+.scroll-config-estados .scroll-bar:vertical .decrement-arrow {
+    -fx-background-color: #555555;
+}
+
 .topo {
     -fx-background-color: #BCB8AE;
 }

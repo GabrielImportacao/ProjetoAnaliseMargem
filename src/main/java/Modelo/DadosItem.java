@@ -21,6 +21,8 @@ public class DadosItem {
     
     private final BigDecimal ipi;
     private final BigDecimal precoPadraoVenda;
+    private final LocalDate dataUltimaSaida;
+    private final boolean itemEncalhado;
 
     public DadosItem(String codigo,
                      String descricao,
@@ -34,7 +36,9 @@ public class DadosItem {
                      LocalDate dataCustoPromob,
                      LocalDate dataCustoAnterior,
     				 BigDecimal precoPadraoVenda,
-    				 BigDecimal ipi){
+    				 BigDecimal ipi,
+    				 LocalDate dataUltimaSaida,
+    				 boolean itemEncalhado){
         this.codigo = codigo;
         this.descricao = descricao;
         this.custoAtual = custoAtual;
@@ -48,8 +52,18 @@ public class DadosItem {
         this.dataCustoAnterior = dataCustoAnterior;
         this.precoPadraoVenda = precoPadraoVenda;
         this.ipi = ipi;
+        this.dataUltimaSaida = dataUltimaSaida;
+        this.itemEncalhado = itemEncalhado;
     }
 
+    public LocalDate getDataUltimaSaida() {
+        return dataUltimaSaida;
+    }
+
+    public boolean isItemEncalhado() {
+        return itemEncalhado;
+    }
+    
     public BigDecimal getIpi() {
         return ipi;
     }

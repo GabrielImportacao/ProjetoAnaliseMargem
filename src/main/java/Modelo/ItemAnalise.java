@@ -9,6 +9,11 @@ import javafx.beans.property.StringProperty;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 
 public class ItemAnalise {
     private final StringProperty codigo = new SimpleStringProperty("");
@@ -47,6 +52,48 @@ public class ItemAnalise {
     
     private final StringProperty corEspecialFundo = new SimpleStringProperty("#92D050");
     private final StringProperty corEspecialTexto = new SimpleStringProperty("#000000");
+    
+    private final ObjectProperty<LocalDate> dataUltimaSaida = new SimpleObjectProperty<>();
+    private final BooleanProperty itemEncalhado = new SimpleBooleanProperty(false);
+    
+    private final BooleanProperty itemEncalhadoConfirmado = new SimpleBooleanProperty(false);
+    
+    
+    public boolean isItemEncalhadoConfirmado() {
+        return itemEncalhadoConfirmado.get();
+    }
+
+    public void setItemEncalhadoConfirmado(boolean itemEncalhadoConfirmado) {
+        this.itemEncalhadoConfirmado.set(itemEncalhadoConfirmado);
+    }
+
+    public BooleanProperty itemEncalhadoConfirmadoProperty() {
+        return itemEncalhadoConfirmado;
+    }
+    
+    public LocalDate getDataUltimaSaida() {
+        return dataUltimaSaida.get();
+    }
+
+    public void setDataUltimaSaida(LocalDate dataUltimaSaida) {
+        this.dataUltimaSaida.set(dataUltimaSaida);
+    }
+
+    public ObjectProperty<LocalDate> dataUltimaSaidaProperty() {
+        return dataUltimaSaida;
+    }
+
+    public boolean isItemEncalhado() {
+        return itemEncalhado.get();
+    }
+
+    public void setItemEncalhado(boolean itemEncalhado) {
+        this.itemEncalhado.set(itemEncalhado);
+    }
+
+    public BooleanProperty itemEncalhadoProperty() {
+        return itemEncalhado;
+    }
     
     public String getCorEspecialFundo() {
         return corEspecialFundo.get();
@@ -157,7 +204,13 @@ public class ItemAnalise {
     }
 
     public void setCodigo(String codigo) {
-        this.codigo.set(codigo == null ? "" : codigo.trim().toUpperCase());
+        String novoCodigo = codigo == null ? "" : codigo.trim().toUpperCase();
+
+        if (!novoCodigo.equals(this.codigo.get())) {
+            setItemEncalhadoConfirmado(false);
+        }
+
+        this.codigo.set(novoCodigo);
     }
 
     public StringProperty codigoProperty() {
@@ -390,6 +443,13 @@ public class ItemAnalise {
             setIpiProposta(BigDecimal.ZERO);
             setIpiAtual(BigDecimal.ZERO);
             setIpiAnterior(BigDecimal.ZERO);
+            
+            setDataUltimaSaida(null);
+            setItemEncalhado(false);
+            
+            setDataUltimaSaida(null);
+            setItemEncalhado(false);
+            setItemEncalhadoConfirmado(false);
 
             return;
         }
@@ -415,5 +475,12 @@ public class ItemAnalise {
         setIpiProposta(BigDecimal.ZERO);
         setIpiAtual(BigDecimal.ZERO);
         setIpiAnterior(BigDecimal.ZERO);
+        
+        setDataUltimaSaida(dados.getDataUltimaSaida());
+        setItemEncalhado(dados.isItemEncalhado());
+
+        if (!dados.isItemEncalhado()) {
+            setItemEncalhadoConfirmado(false);
+        }
     }
 }

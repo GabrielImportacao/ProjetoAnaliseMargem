@@ -1,0 +1,90 @@
+
+============================================================
+DATA/HORA: 29/06/2026 14:41:10
+CONTEXTO: Inicialização > pré-carregamento das bases
+ORIGEM PROVAVEL: EXTERNO
+MENSAGEM AO USUARIO: O programa encontrou problema ao acessar algum arquivo, planilha, banco de dados ou caminho externo.
+ORIENTACAO: Verifique se os arquivos existem, se a unidade K: está acessível, se a planilha/banco não foi movido e se o usuário tem permissão.
+LOCAL TECNICO: Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:89)
+THREAD: JavaFX Application Thread
+JAVA: 25.0.2
+SISTEMA: Windows 11 10.0
+PASTA EXECUCAO: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
+
+ERRO:
+java.lang.RuntimeException: Erro ao carregar itens do banco metal.db.
+	at Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:89)
+	at Repositorio.ItemRepositorySqlite.preCarregarCache(ItemRepositorySqlite.java:34)
+	at Controle.DadosItemService.preCarregarBases(DadosItemService.java:19)
+	at Controle.ItemService.preCarregarBases(ItemService.java:30)
+	at Visao.telaInicial$3.call(telaInicial.java:2208)
+	at Visao.telaInicial$3.call(telaInicial.java:2205)
+	at javafx.graphics@21.0.4/javafx.concurrent.Task$TaskCallable.call(Task.java:1399)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: java.lang.IllegalStateException: Coluna obrigatória não encontrada no metal.db: CUSTO
+	at Repositorio.ItemRepositorySqlite.validarColunaObrigatoria(ItemRepositorySqlite.java:137)
+	at Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:74)
+	... 8 more
+
+============================================================
+
+============================================================
+DATA/HORA: 29/06/2026 14:42:52
+CONTEXTO: Inicialização > pré-carregamento das bases
+ORIGEM PROVAVEL: EXTERNO
+MENSAGEM AO USUARIO: O programa encontrou problema ao acessar algum arquivo, planilha, banco de dados ou caminho externo.
+ORIENTACAO: Verifique se os arquivos existem, se a unidade K: está acessível, se a planilha/banco não foi movido e se o usuário tem permissão.
+LOCAL TECNICO: Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:89)
+THREAD: JavaFX Application Thread
+JAVA: 25.0.2
+SISTEMA: Windows 11 10.0
+PASTA EXECUCAO: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
+
+ERRO:
+java.lang.RuntimeException: Erro ao carregar itens do banco metal.db.
+	at Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:89)
+	at Repositorio.ItemRepositorySqlite.preCarregarCache(ItemRepositorySqlite.java:34)
+	at Controle.DadosItemService.preCarregarBases(DadosItemService.java:19)
+	at Controle.ItemService.preCarregarBases(ItemService.java:30)
+	at Visao.telaInicial$3.call(telaInicial.java:2208)
+	at Visao.telaInicial$3.call(telaInicial.java:2205)
+	at javafx.graphics@21.0.4/javafx.concurrent.Task$TaskCallable.call(Task.java:1399)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: java.lang.IllegalStateException: Coluna obrigatória não encontrada no metal.db: CUSTO
+	at Repositorio.ItemRepositorySqlite.validarColunaObrigatoria(ItemRepositorySqlite.java:137)
+	at Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:74)
+	... 8 more
+
+============================================================
+
+============================================================
+DATA/HORA: 29/06/2026 14:45:22
+CONTEXTO: Inicialização > pré-carregamento das bases
+ORIGEM PROVAVEL: EXTERNO
+MENSAGEM AO USUARIO: O programa encontrou problema ao acessar algum arquivo, planilha, banco de dados ou caminho externo.
+ORIENTACAO: Verifique se os arquivos existem, se a unidade K: está acessível, se a planilha/banco não foi movido e se o usuário tem permissão.
+LOCAL TECNICO: Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:89)
+THREAD: JavaFX Application Thread
+JAVA: 25.0.2
+SISTEMA: Windows 11 10.0
+PASTA EXECUCAO: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
+
+ERRO:
+java.lang.RuntimeException: Erro ao carregar itens do banco metal.db.
+	at Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:89)
+	at Repositorio.ItemRepositorySqlite.preCarregarCache(ItemRepositorySqlite.java:34)
+	at Controle.DadosItemService.preCarregarBases(DadosItemService.java:19)
+	at Controle.ItemService.preCarregarBases(ItemService.java:30)
+	at Visao.telaInicial$3.call(telaInicial.java:2208)
+	at Visao.telaInicial$3.call(telaInicial.java:2205)
+	at javafx.graphics@21.0.4/javafx.concurrent.Task$TaskCallable.call(Task.java:1399)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: java.lang.IllegalStateException: Coluna obrigatória não encontrada no metal.db: CUSTO
+	at Repositorio.ItemRepositorySqlite.validarColunaObrigatoria(ItemRepositorySqlite.java:137)
+	at Repositorio.ItemRepositorySqlite.carregarCacheSeNecessario(ItemRepositorySqlite.java:74)
+	... 8 more
+
+============================================================

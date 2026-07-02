@@ -10,10 +10,12 @@ public class TabelaResumo extends GridPane {
 
     private static final double ALTURA_LINHA = 20;
     private static final double LARGURA_COLUNA_TITULO = 155;
-    private static final double LARGURA_COLUNA_VALOR = 120;
+    private static final double LARGURA_COLUNA_VALOR_TABELA = 120;
+    private static final double LARGURA_COLUNA_VALOR_NEGOCIADO = 140;
     private static final double LARGURA_COLUNA_IPI = 150;
 
     public TabelaResumo(
+            Label totalTabelaLabel,
             Label totalPropostaLabel,
             Label totalComIpiLabel,
             Label resultadoAtualLabel,
@@ -26,20 +28,24 @@ public class TabelaResumo extends GridPane {
         setStyle("-fx-padding: 0;");
 
         add(criarCelulaTexto("RESULTADOS", 0, 0, true, Pos.CENTER), 0, 0);
-        add(criarCelulaTexto("VALOR TOTAL", 1, 0, true, Pos.CENTER), 1, 0);
-        add(criarCelulaTexto("VALOR TOTAL + IPI", 2, 0, true, Pos.CENTER), 2, 0);
+        add(criarCelulaTexto("VALOR TABELA", 1, 0, true, Pos.CENTER), 1, 0);
+        add(criarCelulaTexto("VALOR NEGOCIADO", 2, 0, true, Pos.CENTER), 2, 0);
+        add(criarCelulaTexto("VALOR TOTAL + IPI", 3, 0, true, Pos.CENTER), 3, 0);
 
         add(criarCelulaTexto("RESULTADO PROPOSTA", 0, 1, false, Pos.CENTER), 0, 1);
-        add(criarCelulaValor(totalPropostaLabel, 1, 1), 1, 1);
-        add(criarCelulaValor(totalComIpiLabel, 2, 1), 2, 1);
+        add(criarCelulaValor(totalTabelaLabel, 1, 1), 1, 1);
+        add(criarCelulaValor(totalPropostaLabel, 2, 1), 2, 1);
+        add(criarCelulaValor(totalComIpiLabel, 3, 1), 3, 1);
 
         add(criarCelulaTexto("RESULTADO ATUAL", 0, 2, false, Pos.CENTER), 0, 2);
-        add(criarCelulaValor(resultadoAtualLabel, 1, 2), 1, 2);
-        add(criarCelulaValor(resultadoAtualComIpiLabel, 2, 2), 2, 2);
+        add(criarCelulaTexto("", 1, 2, false, Pos.CENTER), 1, 2);
+        add(criarCelulaValor(resultadoAtualLabel, 2, 2), 2, 2);
+        add(criarCelulaValor(resultadoAtualComIpiLabel, 3, 2), 3, 2);
 
         add(criarCelulaTexto("RESULTADO ANTERIOR", 0, 3, false, Pos.CENTER), 0, 3);
-        add(criarCelulaValor(resultadoAnteriorLabel, 1, 3), 1, 3);
-        add(criarCelulaValor(resultadoAnteriorComIpiLabel, 2, 3), 2, 3);
+        add(criarCelulaTexto("", 1, 3, false, Pos.CENTER), 1, 3);
+        add(criarCelulaValor(resultadoAnteriorLabel, 2, 3), 2, 3);
+        add(criarCelulaValor(resultadoAnteriorComIpiLabel, 3, 3), 3, 3);
     }
 
     private StackPane criarCelulaTexto(String texto, int col, int row, boolean cabecalho, Pos alinhamento) {
@@ -77,7 +83,8 @@ public class TabelaResumo extends GridPane {
 
         double largura = switch (col) {
             case 0 -> LARGURA_COLUNA_TITULO;
-            case 1 -> LARGURA_COLUNA_VALOR;
+            case 1 -> LARGURA_COLUNA_VALOR_TABELA;
+            case 2 -> LARGURA_COLUNA_VALOR_NEGOCIADO;
             default -> LARGURA_COLUNA_IPI;
         };
 
@@ -99,7 +106,7 @@ public class TabelaResumo extends GridPane {
 
     private String montarBorda(int col, int row) {
         int topo = 2;
-        int direita = col == 2 ? 2 : 0;
+        int direita = col == 3 ? 2 : 0;
         int baixo = row == 3 ? 2 : 0;
         int esquerda = 2;
 

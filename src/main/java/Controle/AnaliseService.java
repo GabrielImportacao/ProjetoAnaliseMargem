@@ -69,19 +69,17 @@ public void recalcular(ItemAnalise item, BigDecimal percentualBaseEstado) {
     item.setIpiAnterior(calcularIpi(totalAnterior, item.getPercentualIpi()));
 }
 
-    private BigDecimal calcularMargem(BigDecimal custo, BigDecimal valorUnitario) {
-        BigDecimal custoSeguro = valorSeguro(custo);
-        BigDecimal valorSeguro = valorSeguro(valorUnitario);
+private BigDecimal calcularMargem(BigDecimal custo, BigDecimal valorUnitario) {
+    BigDecimal custoSeguro = valorSeguro(custo);
+    BigDecimal valorSeguro = valorSeguro(valorUnitario);
 
-        if (custoSeguro.compareTo(BigDecimal.ZERO) <= 0 || valorSeguro.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-
-        return custoSeguro
-                .divide(valorSeguro, 6, RoundingMode.HALF_UP)
-                .multiply(new BigDecimal("100"))
-                .setScale(2, RoundingMode.HALF_UP);
+    if (custoSeguro.compareTo(BigDecimal.ZERO) <= 0 || valorSeguro.compareTo(BigDecimal.ZERO) <= 0) {
+        return BigDecimal.ZERO;
     }
+
+    return custoSeguro
+            .divide(valorSeguro, 6, RoundingMode.HALF_UP);
+}
 
     private BigDecimal calcularVariacao(BigDecimal valorUnitario, BigDecimal precoReferencia) {
     BigDecimal valorSeguro = valorSeguro(valorUnitario);

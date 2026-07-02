@@ -78,7 +78,9 @@ public class ItemService {
                 dadosConsulta.getDataCustoPromob(),
                 dadosConsulta.getDataCustoAnterior(),
                 dadosConsulta.getPrecoPadraoVenda(),
-                dadosConsulta.getIpi()
+                dadosConsulta.getIpi(),
+                dadosConsulta.getDataUltimaSaida(),
+                dadosConsulta.isItemEncalhado()
         );
     }
     

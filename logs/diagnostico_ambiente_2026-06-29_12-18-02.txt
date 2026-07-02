@@ -1,0 +1,13 @@
+===== DIAGNOSTICO DE AMBIENTE =====
+Data/Hora: 2026-06-29T12:18:02.948795900
+user.dir: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
+user.home: C:\Users\import3
+java.version: 25.0.2
+os.name: Windows 11
+os.version: 10.0
+APPDATA: C:\Users\import3\AppData\Roaming
+LOCALAPPDATA: C:\Users\import3\AppData\Local
+USERNAME: import3
+COMPUTERNAME: IMPORT3P15
+===================================
+

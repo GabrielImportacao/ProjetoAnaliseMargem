@@ -28,6 +28,9 @@ public class DadosItemConsulta {
     private final String registroCustoAnterior;
     private final LocalDate dataCustoAnterior;
     private final FonteCusto fonteCustoAnterior;
+    
+    private final LocalDate dataUltimaSaida;
+    private final boolean itemEncalhado;
 
     public DadosItemConsulta(
             String codigoItem,
@@ -49,7 +52,9 @@ public class DadosItemConsulta {
             BigDecimal custoAnterior,
             String registroCustoAnterior,
             LocalDate dataCustoAnterior,
-            FonteCusto fonteCustoAnterior
+            FonteCusto fonteCustoAnterior,
+            LocalDate dataUltimaSaida,
+            boolean itemEncalhado
     ) {
         this.codigoItem = codigoItem;
         this.descricao = descricao;
@@ -71,8 +76,18 @@ public class DadosItemConsulta {
         this.registroCustoAnterior = registroCustoAnterior;
         this.dataCustoAnterior = dataCustoAnterior;
         this.fonteCustoAnterior = fonteCustoAnterior;
+        this.dataUltimaSaida = dataUltimaSaida;
+        this.itemEncalhado = itemEncalhado;
     }
 
+    public LocalDate getDataUltimaSaida() {
+        return dataUltimaSaida;
+    }
+
+    public boolean isItemEncalhado() {
+        return itemEncalhado;
+    }
+    
     public String getCodigoItem() {
         return codigoItem;
     }

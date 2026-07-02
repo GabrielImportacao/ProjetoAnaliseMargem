@@ -31,6 +31,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
@@ -58,19 +59,43 @@ import java.util.Map;
 import Visao.componentes.MiniTabelaEstadoBase;
 import Visao.componentes.TabelaResumo;
 
+import Controle.LayoutTabelaService;
+import Modelo.LayoutColunaTabela;
+import javafx.collections.ListChangeListener;
+
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
+import Controle.EstadoTabelaService;
+
+import Configuracao.ConfiguracaoUsuario;
+import Configuracao.ConfiguracaoUsuarioService;
+import javafx.css.PseudoClass;
+
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
+import java.time.LocalDateTime;
+
 public class telaInicial extends Application {
     private final ItemService itemService = new ItemService();
     private final AnaliseService analiseService = new AnaliseService();
     private final ObservableList<ItemAnalise> itens = FXCollections.observableArrayList();
+    private final LayoutTabelaService layoutTabelaService = new LayoutTabelaService();
+    private final EstadoTabelaService estadoTabelaService = new EstadoTabelaService();
 
     private final Label totalPropostaLabel = new Label("R$ 0,00");
     private final Label resultadoAtualComIpiLabel = new Label("R$ 0,00");
     private final Label resultadoAnteriorComIpiLabel = new Label("R$ 0,00");
     private final Label totalComIpiLabel = new Label("R$ 0,00");
+    private final Label totalTabelaLabel = new Label("R$ 0,00");
     private final Label resultadoAtualLabel = new Label("R$ 0,00");
     private final Label resultadoAnteriorLabel = new Label("R$ 0,00");
     private final ComboBox<EstadoInfo> estadoCombo = new ComboBox<>();
     private final Label baseEstadoLabel = new Label("0,00%");
+    
+    private final Label ultimaAtualizacaoLabel = new Label("Última atualização: --/--/----\nàs --:--");
         
     private TableView<ItemAnalise> tabela;
     private static final double ALTURA_LINHA_TABELA = 24;
@@ -92,34 +117,85 @@ public class telaInicial extends Application {
 
     private int indiceLinhaFocoPendente = -1;
     private String colunaFocoPendente = null;
-    private boolean colagemEmLoteEmAndamento = false;
+    private boolean colagemEmLoteEmAndamento = false;    
+    private int indiceInicioSelecaoArrastada = -1;
+    private boolean aplicandoLayoutTabela = false;
+    private boolean salvamentoLayoutTabelaPendente = false;
+    
+    private final ConfiguracaoUsuarioService configuracaoUsuarioService = new ConfiguracaoUsuarioService();
+    private ConfiguracaoUsuario configuracaoUsuario = configuracaoUsuarioService.carregar();
+    
+    private static final PseudoClass PSEUDO_ITEM_ENCALHADO =
+            PseudoClass.getPseudoClass("item-encalhado");
+    
+    private Timeline atualizacaoAutomaticaTimeline;
+    private boolean atualizacaoDadosEmAndamento = false;
+
+    private static final Duration INTERVALO_ATUALIZACAO_AUTOMATICA = Duration.hours(1);
+    private static final DateTimeFormatter FORMATADOR_DATA_ATUALIZACAO =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter FORMATADOR_HORA_ATUALIZACAO =
+            DateTimeFormatter.ofPattern("HH:mm");
+    
+    private TableColumn<ItemAnalise, Void> okEncalhadoCol;
 
     public static void main(String[] args) {
         launch(args);
     }
 
     private void tratarNavegacaoCampoEditavel(
-            KeyEvent event,
-            int indiceAtual,
-            String colunaAtual,
-            Runnable confirmarValorAtual
-    ) {
-        if (event.getCode() != KeyCode.ENTER && event.getCode() != KeyCode.TAB) {
-            return;
-        }
+        KeyEvent event,
+        int indiceAtual,
+        String colunaAtual,
+        Runnable confirmarValorAtual
+) {
+    KeyCode tecla = event.getCode();
 
-        event.consume();
+    boolean teclaVertical = tecla == KeyCode.ENTER
+            || tecla == KeyCode.UP
+            || tecla == KeyCode.DOWN;
 
-        confirmarValorAtual.run();
+    boolean teclaHorizontal = tecla == KeyCode.TAB
+            || tecla == KeyCode.LEFT
+            || tecla == KeyCode.RIGHT;
 
-        if (event.getCode() == KeyCode.ENTER) {
-            moverFocoVertical(indiceAtual, colunaAtual, event.isShiftDown());
-            return;
-        }
-
-        moverFocoHorizontal(indiceAtual, colunaAtual, event.isShiftDown());
+    if (!teclaVertical && !teclaHorizontal) {
+        return;
     }
 
+    event.consume();
+
+    confirmarValorAtual.run();
+
+    if (tecla == KeyCode.ENTER) {
+        moverFocoVertical(indiceAtual, colunaAtual, event.isShiftDown());
+        return;
+    }
+
+    if (tecla == KeyCode.UP) {
+        moverFocoVertical(indiceAtual, colunaAtual, true);
+        return;
+    }
+
+    if (tecla == KeyCode.DOWN) {
+        moverFocoVertical(indiceAtual, colunaAtual, false);
+        return;
+    }
+
+    if (tecla == KeyCode.TAB) {
+        moverFocoHorizontal(indiceAtual, colunaAtual, event.isShiftDown());
+        return;
+    }
+
+    if (tecla == KeyCode.LEFT) {
+        moverFocoHorizontal(indiceAtual, colunaAtual, true);
+        return;
+    }
+
+    if (tecla == KeyCode.RIGHT) {
+        moverFocoHorizontal(indiceAtual, colunaAtual, false);
+    }
+}
     private int obterIndiceRodapeTabela() {
         int indiceRodape = itens.indexOf(linhaRodapeTabela);
 
@@ -334,8 +410,21 @@ public class telaInicial extends Application {
         stage.setScene(scene);
         stage.setMinWidth(1050);
         stage.setMinHeight(600);
+        stage.setOnCloseRequest(event -> {
+            salvarEstadoTabelaAtual();
+            pararAtualizacaoAutomatica();
+        });
         stage.show();
+        iniciarAtualizacaoAutomatica();
         preCarregarBasesAoIniciar();
+    }
+    
+    private void salvarEstadoTabelaAtual() {
+        try {
+            estadoTabelaService.salvarLinhasTabelaInicial(itens);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     private HBox criarBarraAcoesTabela() {
@@ -430,35 +519,46 @@ public class telaInicial extends Application {
         int quantidadeTotal = 0;
         BigDecimal valorTotalProposta = BigDecimal.ZERO;
 
-        BigDecimal somaMargemAtual = BigDecimal.ZERO;
-        BigDecimal somaMargemPromob = BigDecimal.ZERO;
-        BigDecimal somaMargemAnterior = BigDecimal.ZERO;
+        BigDecimal custoTotalAtual = BigDecimal.ZERO;
+        BigDecimal valorTotalAtual = BigDecimal.ZERO;
 
-        int qtdMargemAtual = 0;
-        int qtdMargemPromob = 0;
-        int qtdMargemAnterior = 0;
+        BigDecimal custoTotalPromob = BigDecimal.ZERO;
+        BigDecimal valorTotalPromob = BigDecimal.ZERO;
+
+        BigDecimal custoTotalAnterior = BigDecimal.ZERO;
+        BigDecimal valorTotalAnterior = BigDecimal.ZERO;
 
         for (ItemAnalise item : itens) {
             if (isLinhaRodapeTabela(item) || !temCodigoPreenchido(item)) {
                 continue;
             }
 
-            quantidadeTotal += item.getQuantidade();
-            valorTotalProposta = valorTotalProposta.add(valorSeguro(item.getValorTotal()));
+            int quantidade = item.getQuantidade();
+            BigDecimal quantidadeDecimal = BigDecimal.valueOf(quantidade);
+            BigDecimal valorTotalLinha = valorSeguro(item.getValorTotal());
 
-            if (margemValidaParaMedia(item.getMargemAtual(), item.getCustoAtual(), item.getValorUnitario())) {
-                somaMargemAtual = somaMargemAtual.add(item.getMargemAtual());
-                qtdMargemAtual++;
+            quantidadeTotal += quantidade;
+            valorTotalProposta = valorTotalProposta.add(valorTotalLinha);
+
+            if (custoValidoParaRodape(item.getCustoAtual(), valorTotalLinha, quantidade)) {
+                custoTotalAtual = custoTotalAtual.add(
+                        valorSeguro(item.getCustoAtual()).multiply(quantidadeDecimal)
+                );
+                valorTotalAtual = valorTotalAtual.add(valorTotalLinha);
             }
 
-            if (margemValidaParaMedia(item.getMargemPromob(), item.getCustoPromob(), item.getValorUnitario())) {
-                somaMargemPromob = somaMargemPromob.add(item.getMargemPromob());
-                qtdMargemPromob++;
+            if (custoValidoParaRodape(item.getCustoPromob(), valorTotalLinha, quantidade)) {
+                custoTotalPromob = custoTotalPromob.add(
+                        valorSeguro(item.getCustoPromob()).multiply(quantidadeDecimal)
+                );
+                valorTotalPromob = valorTotalPromob.add(valorTotalLinha);
             }
 
-            if (margemValidaParaMedia(item.getMargemAnterior(), item.getCustoAnterior(), item.getValorUnitario())) {
-                somaMargemAnterior = somaMargemAnterior.add(item.getMargemAnterior());
-                qtdMargemAnterior++;
+            if (custoValidoParaRodape(item.getCustoAnterior(), valorTotalLinha, quantidade)) {
+                custoTotalAnterior = custoTotalAnterior.add(
+                        valorSeguro(item.getCustoAnterior()).multiply(quantidadeDecimal)
+                );
+                valorTotalAnterior = valorTotalAnterior.add(valorTotalLinha);
             }
         }
 
@@ -468,25 +568,41 @@ public class telaInicial extends Application {
         linhaRodapeTabela.setQuantidade(quantidadeTotal);
         linhaRodapeTabela.setValorTotal(valorTotalProposta);
 
-        linhaRodapeTabela.setMargemAtual(calcularMediaOuZero(somaMargemAtual, qtdMargemAtual));
-        linhaRodapeTabela.setMargemPromob(calcularMediaOuZero(somaMargemPromob, qtdMargemPromob));
-        linhaRodapeTabela.setMargemAnterior(calcularMediaOuZero(somaMargemAnterior, qtdMargemAnterior));
+        linhaRodapeTabela.setCustoAtual(custoTotalAtual);
+        linhaRodapeTabela.setCustoPromob(custoTotalPromob);
+        linhaRodapeTabela.setCustoAnterior(custoTotalAnterior);
+
+        linhaRodapeTabela.setMargemAtual(calcularCustoSobreValor(custoTotalAtual, valorTotalAtual));
+        linhaRodapeTabela.setMargemPromob(calcularCustoSobreValor(custoTotalPromob, valorTotalPromob));
+        linhaRodapeTabela.setMargemAnterior(calcularCustoSobreValor(custoTotalAnterior, valorTotalAnterior));
 
         garantirRodapeNoFinal();
     }
-
-    private boolean margemValidaParaMedia(BigDecimal margem, BigDecimal custo, BigDecimal valorUnitario) {
-        return margem != null
+    
+    private boolean custoValidoParaRodape(BigDecimal custo, BigDecimal valorTotalLinha, int quantidade) {
+        return quantidade > 0
                 && valorSeguro(custo).compareTo(BigDecimal.ZERO) > 0
-                && valorSeguro(valorUnitario).compareTo(BigDecimal.ZERO) > 0;
+                && valorSeguro(valorTotalLinha).compareTo(BigDecimal.ZERO) > 0;
     }
 
-    private BigDecimal calcularMediaOuZero(BigDecimal soma, int quantidade) {
-        if (quantidade <= 0) {
+    private BigDecimal calcularCustoSobreValor(BigDecimal custoTotal, BigDecimal valorTotal) {
+        BigDecimal custoSeguro = valorSeguro(custoTotal);
+        BigDecimal valorSeguro = valorSeguro(valorTotal);
+
+        if (custoSeguro.compareTo(BigDecimal.ZERO) <= 0 || valorSeguro.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
 
-        return soma.divide(BigDecimal.valueOf(quantidade), 2, RoundingMode.HALF_UP);
+        return custoSeguro.divide(valorSeguro, 6, RoundingMode.HALF_UP);
+    }
+    
+    private static String formatarMargemDecimal(BigDecimal valor) {
+        BigDecimal valorSeguro = valor == null ? BigDecimal.ZERO : valor;
+
+        return valorSeguro
+                .setScale(2, RoundingMode.HALF_UP)
+                .toString()
+                .replace('.', ',');
     }
 
     private void prepararDadosIniciais() {
@@ -533,17 +649,32 @@ public class telaInicial extends Application {
         
         atualizarBaseEstado();
 
-        for (int i = 0; i < 5; i++) {
+        carregarEstadoTabelaPersistidoOuPadrao();
+
+        recalcularResumo();
+    }
+
+    private void carregarEstadoTabelaPersistidoOuPadrao() {
+        itens.clear();
+
+        List<ItemAnalise> linhasPersistidas = estadoTabelaService.carregarLinhasTabelaInicial();
+
+        if (linhasPersistidas != null && !linhasPersistidas.isEmpty()) {
+            itens.addAll(linhasPersistidas);
+        }
+
+        while (itens.size() < 5) {
             itens.add(new ItemAnalise());
         }
 
         linhaRodapeTabela.setCodigo(CODIGO_LINHA_RODAPE_TABELA);
         linhaRodapeTabela.setDescricao("TOTAL");
+
         itens.add(linhaRodapeTabela);
-
-        recalcularResumo();
+        garantirRodapeNoFinal();
+        atualizarVisibilidadeColunaOkEncalhado();
     }
-
+    
     private ImageView carregarIcone(String nomeArquivo, double largura, double altura) {
     URL url = localizarRecurso("icons/" + nomeArquivo);
 
@@ -559,8 +690,48 @@ public class telaInicial extends Application {
     return icone;
 }
     
+    private void iniciarAtualizacaoAutomatica() {
+        pararAtualizacaoAutomatica();
+
+        atualizacaoAutomaticaTimeline = new Timeline(
+                new KeyFrame(INTERVALO_ATUALIZACAO_AUTOMATICA, event -> atualizarDadosAutomaticamente())
+        );
+
+        atualizacaoAutomaticaTimeline.setCycleCount(Timeline.INDEFINITE);
+        atualizacaoAutomaticaTimeline.play();
+    }
+
+    private void pararAtualizacaoAutomatica() {
+        if (atualizacaoAutomaticaTimeline != null) {
+            atualizacaoAutomaticaTimeline.stop();
+            atualizacaoAutomaticaTimeline = null;
+        }
+    }
+
+    private void atualizarDadosAutomaticamente() {
+        atualizarDados(false);
+    }
+
+    private void atualizarTextoUltimaAtualizacao() {
+        LocalDateTime agora = LocalDateTime.now();
+
+        ultimaAtualizacaoLabel.setText(
+                "Última atualização: " + agora.format(FORMATADOR_DATA_ATUALIZACAO)
+                        + "\nàs " + agora.format(FORMATADOR_HORA_ATUALIZACAO)
+        );
+    }
+    
     private void atualizarDados() {
-        mostrarOverlayAtualizacao(true);
+        atualizarDados(true);
+    }
+
+    private void atualizarDados(boolean mostrarAvisoConclusao) {
+    	if (atualizacaoDadosEmAndamento) {
+    	    return;
+    	}
+
+    	atualizacaoDadosEmAndamento = true;
+    	mostrarOverlayAtualizacao(true);
         long inicioAtualizacaoMs = System.currentTimeMillis();
         long tempoMinimoExibicaoMs = sortearTempoMinimoAtualizacaoMs();
         
@@ -622,25 +793,42 @@ public class telaInicial extends Application {
 
                 item.aplicarDadosItem(atualizacao.dadosItem());
                 recalcularItem(item);
+                atualizarVisibilidadeColunaOkEncalhado();
             }
 
             recalcularResumo();
+            atualizarVisibilidadeColunaOkEncalhado();atualizarVisibilidadeColunaOkEncalhado();
             tabela.refresh();
+            atualizarTextoUltimaAtualizacao();
             mostrarOverlayAtualizacao(false);
+            atualizacaoDadosEmAndamento = false;
 
-            mostrarAviso(
-                    "Atualização concluída",
-                    "As bases foram recarregadas e os itens da tabela foram atualizados."
-            );
+            if (mostrarAvisoConclusao) {
+                mostrarAviso(
+                        "Atualização concluída",
+                        "As bases foram recarregadas e os itens da tabela foram atualizados."
+                );
+            }
         });
 
         tarefa.setOnFailed(event -> {
             Throwable erro = tarefa.getException();
 
-            mostrarErro(
-                    "Atualização de dados > recarregar bases e consultar itens preenchidos",
-                    erro
-            );
+            mostrarOverlayAtualizacao(false);
+            atualizacaoDadosEmAndamento = false;
+
+            if (mostrarAvisoConclusao) {
+                mostrarErro(
+                        "Atualização de dados > recarregar bases e consultar itens preenchidos",
+                        erro
+                );
+            } else if (erro != null) {
+                erro.printStackTrace();
+            }
+        });
+        tarefa.setOnCancelled(event -> {
+            mostrarOverlayAtualizacao(false);
+            atualizacaoDadosEmAndamento = false;
         });
 
         Thread thread = new Thread(tarefa, "AtualizacaoDadosThread");
@@ -678,12 +866,15 @@ public class telaInicial extends Application {
         configButton.setGraphic(carregarIcone("config.png", 18, 18));
         configButton.getStyleClass().add("botao-config");
         configButton.setTooltip(new Tooltip("Configurações"));
+        configButton.setOnAction(event ->
+        		executarComTratamento("Botão CONFIGURAÇÕES", this::abrirTelaConfiguracoes)
+        		);
 
         cabecalho.getChildren().addAll(logoBox, titulo, configButton);
 
         HBox comandos = new HBox(18);
         comandos.getStyleClass().add("area-comandos");
-        comandos.setAlignment(Pos.CENTER_LEFT);
+        comandos.setAlignment(Pos.TOP_LEFT);
         comandos.setPadding(new Insets(8, 14, 8, 14));
         comandos.setFillHeight(false);
         
@@ -696,6 +887,17 @@ public class telaInicial extends Application {
         atualizarButton.setOnAction(event ->
         	executarComTratamento("Botão ATUALIZAR DADOS", this::atualizarDados)
         		);
+        ultimaAtualizacaoLabel.setStyle(
+                "-fx-font-size: 16px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-text-fill: #555555;"
+        );
+        ultimaAtualizacaoLabel.setWrapText(false);
+        ultimaAtualizacaoLabel.setMinWidth(190);
+
+        VBox atualizarBox = new VBox(3);
+        atualizarBox.setAlignment(Pos.CENTER_LEFT);
+        atualizarBox.getChildren().addAll(atualizarButton, ultimaAtualizacaoLabel);
         
         MiniTabelaEstadoBase estadoBaseTabela = new MiniTabelaEstadoBase(estadoCombo, baseEstadoLabel);
 
@@ -712,23 +914,21 @@ public class telaInicial extends Application {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         GridPane resumo = new TabelaResumo(
+                totalTabelaLabel,
                 totalPropostaLabel,
                 totalComIpiLabel,
                 resultadoAtualLabel,
                 resultadoAtualComIpiLabel,
                 resultadoAnteriorLabel,
                 resultadoAnteriorComIpiLabel
-        		);
+        );
 
-        comandos.getChildren().addAll(atualizarButton, estadoBaseTabela, valorPadraoButton, spacer, resumo);
+        comandos.getChildren().addAll(atualizarBox, estadoBaseTabela, valorPadraoButton, spacer, resumo);
 
         topo.getChildren().addAll(cabecalho, comandos);
         return topo;
     }
-    
-    
-
-
+        
     private boolean cliqueFoiDentroDoNo(Node alvo, Node noPai) {
         Node atual = alvo;
 
@@ -774,6 +974,83 @@ public class telaInicial extends Application {
         return true;
     }
     
+    private boolean eventoMouseVeioDeAreaEditavel(MouseEvent event) {
+        if (!(event.getTarget() instanceof Node node)) {
+            return false;
+        }
+
+        Node atual = node;
+
+        while (atual != null) {
+            if (atual instanceof TextInputControl) {
+                return true;
+            }
+
+            if (atual instanceof TableCell<?, ?> cell) {
+                TableColumn<?, ?> coluna = cell.getTableColumn();
+
+                if (coluna != null) {
+                    String nomeColuna = coluna.getText();
+
+                    if (COLUNA_CODIGO.equals(nomeColuna)
+                            || COLUNA_QUANTIDADE.equals(nomeColuna)
+                            || COLUNA_VALOR_UNITARIO.equals(nomeColuna)) {
+                        return true;
+                    }
+                }
+            }
+
+            atual = atual.getParent();
+        }
+
+        return false;
+    }
+
+    private void selecionarIntervaloTabela(int indiceInicial, int indiceFinal, boolean adicionarSelecao) {
+        if (tabela == null || tabela.getSelectionModel() == null) {
+            return;
+        }
+
+        int inicio = Math.min(indiceInicial, indiceFinal);
+        int fim = Math.max(indiceInicial, indiceFinal);
+
+        if (!adicionarSelecao) {
+            tabela.getSelectionModel().clearSelection();
+        }
+
+        for (int i = inicio; i <= fim; i++) {
+            if (i < 0 || i >= itens.size()) {
+                continue;
+            }
+
+            ItemAnalise item = itens.get(i);
+
+            if (isLinhaRodapeTabela(item)) {
+                continue;
+            }
+
+            tabela.getSelectionModel().select(i);
+        }
+    }
+
+    private List<ItemAnalise> obterLinhasSelecionadasEditaveis() {
+        List<ItemAnalise> selecionados = new ArrayList<>();
+
+        if (tabela == null || tabela.getSelectionModel() == null) {
+            return selecionados;
+        }
+
+        for (ItemAnalise item : tabela.getSelectionModel().getSelectedItems()) {
+            if (item == null || isLinhaRodapeTabela(item)) {
+                continue;
+            }
+
+            selecionados.add(item);
+        }
+
+        return selecionados;
+    }
+    
     @SuppressWarnings("unchecked")
 	private TableView<ItemAnalise> criarTabela() {
         tabela = new TableView<>(itens);
@@ -782,6 +1059,7 @@ public class telaInicial extends Application {
         tabela.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         tabela.setFixedCellSize(ALTURA_LINHA_TABELA);
         tabela.setSortPolicy(this::ordenarTabelaMantendoRodape);
+        tabela.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         
         
         TableColumn<ItemAnalise, String> codigoCol = new TableColumn<>("CÓDIGO");
@@ -825,6 +1103,15 @@ public class telaInicial extends Application {
         valorTotalCol.setCellValueFactory(data -> data.getValue().valorTotalProperty());
         valorTotalCol.setCellFactory(col -> new BigDecimalTableCell(true, true,true));
         valorTotalCol.setPrefWidth(125);
+        
+        okEncalhadoCol = new TableColumn<>("");
+        okEncalhadoCol.setCellFactory(col -> new OkItemEncalhadoCell());
+        okEncalhadoCol.setPrefWidth(48);
+        okEncalhadoCol.setMinWidth(42);
+        okEncalhadoCol.setMaxWidth(58);
+        okEncalhadoCol.setSortable(false);
+        okEncalhadoCol.setReorderable(false);
+        okEncalhadoCol.setVisible(false);
 
         TableColumn<ItemAnalise, BigDecimal> variacaoAtualCol = new TableColumn<>("VARIAÇÃO ATUAL");
         variacaoAtualCol.setCellValueFactory(data -> data.getValue().variacaoAtualProperty());
@@ -925,17 +1212,43 @@ public class telaInicial extends Application {
                 dataCustoAnteriorCol
         );
         analiseAnteriorGrupo.getStyleClass().add("grupo-azul");
-
-        tabela.getColumns().addAll(
+        
+        configurarIdentificadoresColunasTabela(
                 codigoCol,
                 descricaoCol,
                 quantidadeCol,
                 valorUnitarioCol,
                 valorTotalCol,
+
                 baseAtualGrupo,
+                variacaoAtualCol,
+                margemAtualCol,
+                custoAtualCol,
+                dataCustoCol,
+
                 basePromobGrupo,
-                analiseAnteriorGrupo
+                margemPromobCol,
+                custoPromobCol,
+                dataCustoPromobCol,
+
+                analiseAnteriorGrupo,
+                variacaoAnteriorCol,
+                margemAnteriorCol,
+                custoAnteriorCol,
+                dataCustoAnteriorCol
         );
+
+        tabela.getColumns().addAll(
+        		codigoCol,
+        		descricaoCol,
+        		quantidadeCol,
+        		valorUnitarioCol,
+        		valorTotalCol,
+        		okEncalhadoCol,
+        		baseAtualGrupo,
+        		basePromobGrupo,
+        		analiseAnteriorGrupo
+        		);
         
         registrarOrdemPadraoColunasTabela(
                 codigoCol,
@@ -943,20 +1256,86 @@ public class telaInicial extends Application {
                 quantidadeCol,
                 valorUnitarioCol,
                 valorTotalCol,
+                okEncalhadoCol,
                 baseAtualGrupo,
                 basePromobGrupo,
                 analiseAnteriorGrupo
         );
+        
+        aplicarLayoutPersistidoTabela();
+        registrarListenersPersistenciaLayoutTabela();
 
         tabela.setRowFactory(tv -> {
-            TableRow<ItemAnalise> row = new TableRow<>();
+        	TableRow<ItemAnalise> row = new TableRow<>() {
+        	    @Override
+        	    protected void updateItem(ItemAnalise item, boolean empty) {
+        	        super.updateItem(item, empty);
 
-            row.itemProperty().addListener((obs, itemAntigo, itemNovo) -> {
-                row.getStyleClass().remove("linha-rodape-tabela");
+        	        getStyleClass().remove("linha-rodape-tabela");
 
-                if (isLinhaRodapeTabela(itemNovo)) {
-                    row.getStyleClass().add("linha-rodape-tabela");
+        	        if (!empty && isLinhaRodapeTabela(item)) {
+        	            getStyleClass().add("linha-rodape-tabela");
+        	        }
+
+        	        atualizarPseudoClassesLinha(this);
+        	    }
+        	};
+            
+            row.selectedProperty().addListener((obs, estavaSelecionada, estaSelecionada) -> {
+                atualizarEstiloCondicaoLinha(row);
+            });
+
+            row.setOnMousePressed(event -> {
+                if (event.getButton() != MouseButton.PRIMARY) {
+                    return;
                 }
+
+                if (row.isEmpty() || isLinhaRodapeTabela(row.getItem())) {
+                    return;
+                }
+
+                if (eventoMouseVeioDeAreaEditavel(event)) {
+                    return;
+                }
+
+                indiceInicioSelecaoArrastada = row.getIndex();
+
+                selecionarIntervaloTabela(
+                        indiceInicioSelecaoArrastada,
+                        row.getIndex(),
+                        event.isShortcutDown() || event.isControlDown()
+                );
+
+                event.consume();
+            });
+
+            row.setOnDragDetected(event -> {
+                if (indiceInicioSelecaoArrastada >= 0) {
+                    row.startFullDrag();
+                    event.consume();
+                }
+            });
+
+            row.setOnMouseDragEntered(event -> {
+                if (indiceInicioSelecaoArrastada < 0) {
+                    return;
+                }
+
+                if (row.isEmpty() || isLinhaRodapeTabela(row.getItem())) {
+                    return;
+                }
+
+                selecionarIntervaloTabela(
+                        indiceInicioSelecaoArrastada,
+                        row.getIndex(),
+                        false
+                );
+
+                event.consume();
+            });
+
+            row.setOnMouseReleased(event -> {
+                indiceInicioSelecaoArrastada = -1;
             });
 
             row.setOnKeyPressed(event -> {
@@ -973,6 +1352,43 @@ public class telaInicial extends Application {
         return tabela;
     }
 
+    private boolean colunaRecebeCorCondicao(TableColumn<?, ?> coluna) {
+        if (coluna == null) {
+            return false;
+        }
+
+        String nomeColuna = coluna.getText();
+
+        return COLUNA_CODIGO.equals(nomeColuna)
+                || "DESCRIÇÃO".equals(nomeColuna)
+                || COLUNA_QUANTIDADE.equals(nomeColuna)
+                || COLUNA_VALOR_UNITARIO.equals(nomeColuna)
+                || "VALOR TOTAL".equals(nomeColuna);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void atualizarEstiloCondicaoLinha(TableRow<ItemAnalise> row) {
+        if (row == null || row.getItem() == null || isLinhaRodapeTabela(row.getItem())) {
+            return;
+        }
+
+        ItemAnalise item = row.getItem();
+
+        Platform.runLater(() -> {
+            for (Node node : row.lookupAll(".table-cell")) {
+                if (!(node instanceof TableCell<?, ?> cell)) {
+                    continue;
+                }
+
+                if (!colunaRecebeCorCondicao(cell.getTableColumn())) {
+                    continue;
+                }
+
+                aplicarEstiloCondicao((TableCell<ItemAnalise, ?>) cell, item);
+            }
+        });
+    }
+    
     private URL localizarRecurso(String caminhoRelativo) {
         String caminhoNormal = "/" + caminhoRelativo;
         String caminhoComResources = "/resources/" + caminhoRelativo;
@@ -995,6 +1411,322 @@ public class telaInicial extends Application {
                         + " e "
                         + caminhoComResources
         );
+    }
+    
+    private void configurarIdentificadoresColunasTabela(
+            TableColumn<ItemAnalise, ?> codigoCol,
+            TableColumn<ItemAnalise, ?> descricaoCol,
+            TableColumn<ItemAnalise, ?> quantidadeCol,
+            TableColumn<ItemAnalise, ?> valorUnitarioCol,
+            TableColumn<ItemAnalise, ?> valorTotalCol,
+
+            TableColumn<ItemAnalise, ?> baseAtualGrupo,
+            TableColumn<ItemAnalise, ?> variacaoAtualCol,
+            TableColumn<ItemAnalise, ?> margemAtualCol,
+            TableColumn<ItemAnalise, ?> custoAtualCol,
+            TableColumn<ItemAnalise, ?> dataCustoCol,
+
+            TableColumn<ItemAnalise, ?> basePromobGrupo,
+            TableColumn<ItemAnalise, ?> margemPromobCol,
+            TableColumn<ItemAnalise, ?> custoPromobCol,
+            TableColumn<ItemAnalise, ?> dataCustoPromobCol,
+
+            TableColumn<ItemAnalise, ?> analiseAnteriorGrupo,
+            TableColumn<ItemAnalise, ?> variacaoAnteriorCol,
+            TableColumn<ItemAnalise, ?> margemAnteriorCol,
+            TableColumn<ItemAnalise, ?> custoAnteriorCol,
+            TableColumn<ItemAnalise, ?> dataCustoAnteriorCol
+    ) {
+        codigoCol.setId("codigo");
+        descricaoCol.setId("descricao");
+        quantidadeCol.setId("quantidade");
+        valorUnitarioCol.setId("valor_unitario");
+        valorTotalCol.setId("valor_total");
+        okEncalhadoCol.setId("ok_encalhado");
+
+        baseAtualGrupo.setId("base_atual");
+        variacaoAtualCol.setId("base_atual_variacao");
+        margemAtualCol.setId("base_atual_margem");
+        custoAtualCol.setId("base_atual_custo");
+        dataCustoCol.setId("base_atual_data_custo");
+
+        basePromobGrupo.setId("base_promob");
+        margemPromobCol.setId("base_promob_margem");
+        custoPromobCol.setId("base_promob_custo");
+        dataCustoPromobCol.setId("base_promob_data_custo");
+
+        analiseAnteriorGrupo.setId("analise_anterior");
+        variacaoAnteriorCol.setId("analise_anterior_variacao");
+        margemAnteriorCol.setId("analise_anterior_margem");
+        custoAnteriorCol.setId("analise_anterior_custo");
+        dataCustoAnteriorCol.setId("analise_anterior_data_custo");
+    }
+
+    private boolean deveExibirBotaoOkEncalhado(ItemAnalise item) {
+        return configuracaoUsuario != null
+                && configuracaoUsuario.isFlagItensEncalhados()
+                && item != null
+                && !isLinhaRodapeTabela(item)
+                && item.isItemEncalhado()
+                && !item.isItemEncalhadoConfirmado();
+    }
+
+    private void atualizarVisibilidadeColunaOkEncalhado() {
+        if (okEncalhadoCol == null) {
+            return;
+        }
+
+        boolean deveMostrar = itens.stream()
+                .anyMatch(this::deveExibirBotaoOkEncalhado);
+
+        okEncalhadoCol.setVisible(deveMostrar);
+    }
+
+    private void confirmarItemEncalhado(ItemAnalise item) {
+        if (item == null || isLinhaRodapeTabela(item)) {
+            return;
+        }
+
+        item.setItemEncalhadoConfirmado(true);
+
+        atualizarVisibilidadeColunaOkEncalhado();
+
+        if (tabela != null) {
+            tabela.refresh();
+        }
+
+        salvarEstadoTabelaAtual();
+    }
+    
+    private void aplicarLayoutPersistidoTabela() {
+        if (tabela == null) {
+            return;
+        }
+
+        List<LayoutColunaTabela> layout = layoutTabelaService.carregarLayoutColunasTabelaInicial();
+
+        if (layout == null || layout.isEmpty()) {
+            return;
+        }
+
+        aplicandoLayoutTabela = true;
+
+        try {
+            aplicarOrdemLayoutNasColunas(tabela.getColumns(), null, layout);
+            aplicarLargurasLayoutNasColunas(tabela.getColumns(), layout);
+        } finally {
+            aplicandoLayoutTabela = false;
+        }
+    }
+
+    private void aplicarOrdemLayoutNasColunas(
+            ObservableList<TableColumn<ItemAnalise, ?>> colunas,
+            String idPai,
+            List<LayoutColunaTabela> layout
+    ) {
+        if (colunas == null || colunas.isEmpty() || layout == null || layout.isEmpty()) {
+            return;
+        }
+
+        Map<String, TableColumn<ItemAnalise, ?>> colunasPorId = new HashMap<>();
+
+        for (TableColumn<ItemAnalise, ?> coluna : colunas) {
+            String id = obterIdColunaTabela(coluna);
+
+            if (!id.isBlank()) {
+                colunasPorId.put(id, coluna);
+            }
+        }
+
+        List<LayoutColunaTabela> layoutNivel = layout.stream()
+                .filter(item -> Objects.equals(normalizarIdPai(item.getIdPai()), normalizarIdPai(idPai)))
+                .sorted(Comparator.comparingInt(LayoutColunaTabela::getOrdem))
+                .toList();
+
+        List<TableColumn<ItemAnalise, ?>> novaOrdem = new ArrayList<>();
+        Set<TableColumn<ItemAnalise, ?>> adicionadas = new HashSet<>();
+
+        for (LayoutColunaTabela itemLayout : layoutNivel) {
+            TableColumn<ItemAnalise, ?> coluna = colunasPorId.get(itemLayout.getIdColuna());
+
+            if (coluna == null) {
+                continue;
+            }
+
+            novaOrdem.add(coluna);
+            adicionadas.add(coluna);
+        }
+
+        for (TableColumn<ItemAnalise, ?> coluna : colunas) {
+            if (!adicionadas.contains(coluna)) {
+                novaOrdem.add(coluna);
+            }
+        }
+
+        if (!novaOrdem.isEmpty()) {
+            colunas.setAll(novaOrdem);
+        }
+
+        for (TableColumn<ItemAnalise, ?> coluna : colunas) {
+            if (!coluna.getColumns().isEmpty()) {
+                aplicarOrdemLayoutNasColunas(
+                        coluna.getColumns(),
+                        obterIdColunaTabela(coluna),
+                        layout
+                );
+            }
+        }
+    }
+
+    private void aplicarLargurasLayoutNasColunas(
+            ObservableList<TableColumn<ItemAnalise, ?>> colunas,
+            List<LayoutColunaTabela> layout
+    ) {
+        if (colunas == null || layout == null || layout.isEmpty()) {
+            return;
+        }
+
+        Map<String, LayoutColunaTabela> layoutPorId = new HashMap<>();
+
+        for (LayoutColunaTabela itemLayout : layout) {
+            if (itemLayout != null && itemLayout.getIdColuna() != null) {
+                layoutPorId.put(itemLayout.getIdColuna(), itemLayout);
+            }
+        }
+
+        aplicarLargurasLayoutNasColunasRecursivo(colunas, layoutPorId);
+    }
+
+    private void aplicarLargurasLayoutNasColunasRecursivo(
+            ObservableList<TableColumn<ItemAnalise, ?>> colunas,
+            Map<String, LayoutColunaTabela> layoutPorId
+    ) {
+        for (TableColumn<ItemAnalise, ?> coluna : colunas) {
+            String id = obterIdColunaTabela(coluna);
+            LayoutColunaTabela itemLayout = layoutPorId.get(id);
+
+            if (itemLayout != null && itemLayout.getLargura() > 20) {
+                coluna.setPrefWidth(itemLayout.getLargura());
+            }
+
+            if (!coluna.getColumns().isEmpty()) {
+                aplicarLargurasLayoutNasColunasRecursivo(coluna.getColumns(), layoutPorId);
+            }
+        }
+    }
+
+    private void registrarListenersPersistenciaLayoutTabela() {
+        if (tabela == null) {
+            return;
+        }
+
+        registrarListenersPersistenciaLayoutColunas(tabela.getColumns());
+    }
+
+    private void registrarListenersPersistenciaLayoutColunas(
+            ObservableList<TableColumn<ItemAnalise, ?>> colunas
+    ) {
+        if (colunas == null) {
+            return;
+        }
+
+        colunas.addListener((ListChangeListener<TableColumn<ItemAnalise, ?>>) change -> solicitarSalvarLayoutTabela());
+
+        for (TableColumn<ItemAnalise, ?> coluna : colunas) {
+            coluna.widthProperty().addListener((obs, larguraAnterior, larguraNova) -> solicitarSalvarLayoutTabela());
+
+            if (!coluna.getColumns().isEmpty()) {
+                registrarListenersPersistenciaLayoutColunas(coluna.getColumns());
+            }
+        }
+    }
+
+    private void solicitarSalvarLayoutTabela() {
+        if (aplicandoLayoutTabela || tabela == null) {
+            return;
+        }
+
+        if (salvamentoLayoutTabelaPendente) {
+            return;
+        }
+
+        salvamentoLayoutTabelaPendente = true;
+
+        Platform.runLater(() -> {
+            salvamentoLayoutTabelaPendente = false;
+
+            if (aplicandoLayoutTabela || tabela == null) {
+                return;
+            }
+
+            try {
+                layoutTabelaService.salvarLayoutColunasTabelaInicial(capturarLayoutColunasTabela());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private List<LayoutColunaTabela> capturarLayoutColunasTabela() {
+        List<LayoutColunaTabela> layout = new ArrayList<>();
+
+        if (tabela == null) {
+            return layout;
+        }
+
+        capturarLayoutColunasTabela(tabela.getColumns(), null, layout);
+
+        return layout;
+    }
+
+    private void capturarLayoutColunasTabela(
+            ObservableList<TableColumn<ItemAnalise, ?>> colunas,
+            String idPai,
+            List<LayoutColunaTabela> layout
+    ) {
+        if (colunas == null || layout == null) {
+            return;
+        }
+
+        for (int i = 0; i < colunas.size(); i++) {
+            TableColumn<ItemAnalise, ?> coluna = colunas.get(i);
+            String id = obterIdColunaTabela(coluna);
+
+            if (id.isBlank()) {
+                continue;
+            }
+
+            layout.add(new LayoutColunaTabela(
+                    id,
+                    normalizarIdPai(idPai),
+                    i,
+                    coluna.getWidth()
+            ));
+
+            if (!coluna.getColumns().isEmpty()) {
+                capturarLayoutColunasTabela(
+                        coluna.getColumns(),
+                        id,
+                        layout
+                );
+            }
+        }
+    }
+
+    private String obterIdColunaTabela(TableColumn<ItemAnalise, ?> coluna) {
+        if (coluna == null || coluna.getId() == null) {
+            return "";
+        }
+
+        return coluna.getId().trim();
+    }
+
+    private String normalizarIdPai(String idPai) {
+        if (idPai == null || idPai.isBlank()) {
+            return null;
+        }
+
+        return idPai.trim();
     }
     
     @SafeVarargs
@@ -1037,6 +1769,8 @@ public class telaInicial extends Application {
 
         tabela.getColumns().setAll(ordemPadraoColunasTabela);
         tabela.refresh();
+
+        solicitarSalvarLayoutTabela();
     }
     
     private void limparTabela() {
@@ -1074,6 +1808,9 @@ public class telaInicial extends Application {
 
             tabela.refresh();
         }
+        
+        salvarEstadoTabelaAtual();
+        atualizarVisibilidadeColunaOkEncalhado();
     }
     
     private HBox criarRodape() {
@@ -1082,7 +1819,10 @@ public class telaInicial extends Application {
         rodape.setPadding(new Insets(8, 12, 8, 12));
         rodape.setAlignment(Pos.CENTER_LEFT);
 
-        Label ajuda = new Label("Dica: edite Código, Quantidade e Valor Unitário. Ao confirmar o código, a descrição e custos são buscados na base simulada.");
+        Label ajuda = new Label("Dica: é possível editar Código, Quantidade e Valor Unitário. "
+        									+ "Ao confirmar o código, a descrição e custos são "
+        								+ "buscados nas nossas bases internas! Qualquer dúvida, "
+        													   + "entre em contato com o suporte!");
         ajuda.getStyleClass().add("texto-rodape");
 
         Region spacer = new Region();
@@ -1098,23 +1838,28 @@ public class telaInicial extends Application {
         removerLinha.getStyleClass().add("botao-acao");
         removerLinha.disableProperty().bind(
                 Bindings.createBooleanBinding(
-                        () -> tabela == null
-                                || tabela.getSelectionModel().getSelectedItem() == null
-                                || isLinhaRodapeTabela(tabela.getSelectionModel().getSelectedItem()),
-                        tabela.getSelectionModel().selectedItemProperty()
+                        () -> obterLinhasSelecionadasEditaveis().isEmpty(),
+                        tabela.getSelectionModel().getSelectedItems()
                 )
         );
-        removerLinha.setOnAction(event ->
-        executarComTratamento("Botão REMOVER LINHA", () -> {
-            ItemAnalise selecionado = tabela.getSelectionModel().getSelectedItem();
 
-            if (selecionado != null && !isLinhaRodapeTabela(selecionado)) {
-                itens.remove(selecionado);
-                recalcularResumo();
-                tabela.refresh();
-            }
-        })
-);
+        removerLinha.setOnAction(event ->
+                executarComTratamento("Botão REMOVER LINHA", () -> {
+                    List<ItemAnalise> selecionados = obterLinhasSelecionadasEditaveis();
+
+                    if (selecionados.isEmpty()) {
+                        return;
+                    }
+
+                    itens.removeAll(selecionados);
+                    garantirRodapeNoFinal();
+
+                    recalcularResumo();
+
+                    tabela.getSelectionModel().clearSelection();
+                    tabela.refresh();
+                })
+        );
 
         rodape.getChildren().addAll(ajuda, spacer, adicionarLinha, removerLinha);
         return rodape;
@@ -1130,6 +1875,7 @@ public class telaInicial extends Application {
         executarComTratamento("Busca por código do item: " + codigo, () -> {
             item.aplicarDadosItem(itemService.buscarPorCodigo(codigo).orElse(null));
             recalcularItem(item);
+            atualizarVisibilidadeColunaOkEncalhado();
             recalcularResumo();
             tabela.refresh();
         });
@@ -1138,6 +1884,79 @@ public class telaInicial extends Application {
     private record AtualizacaoLinha(int indiceLinha, DadosItem dadosItem) {
     }
     
+    private void abrirTelaConfiguracoes() {
+        TelaConfiguracoes telaConfiguracoes = new TelaConfiguracoes();
+        telaConfiguracoes.exibir(getJanelaAtual());
+
+        configuracaoUsuario = configuracaoUsuarioService.carregar();
+        
+        atualizarVisibilidadeColunaOkEncalhado();
+
+        if (tabela != null) {
+            tabela.refresh();
+        }
+    }
+    
+    private class OkItemEncalhadoCell extends TableCell<ItemAnalise, Void> {
+
+        private final Button okButton = new Button("OK");
+
+        public OkItemEncalhadoCell() {
+            okButton.getStyleClass().add("botao-ok-encalhado");
+            okButton.setFocusTraversable(false);
+            okButton.setCursor(Cursor.HAND);
+            okButton.setMinWidth(34);
+            okButton.setPrefWidth(34);
+            okButton.setMaxWidth(34);
+            okButton.setMinHeight(22);
+            okButton.setPrefHeight(22);
+
+            okButton.setOnAction(event -> {
+                ItemAnalise item = getTableRow() == null ? null : getTableRow().getItem();
+                confirmarItemEncalhado(item);
+            });
+        }
+
+        @Override
+        protected void updateItem(Void item, boolean empty) {
+            super.updateItem(item, empty);
+
+            ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
+
+            if (empty || !deveExibirBotaoOkEncalhado(itemLinha)) {
+                setText(null);
+                setGraphic(null);
+                setStyle("");
+                return;
+            }
+
+            setText(null);
+            setGraphic(okButton);
+            setAlignment(Pos.CENTER);
+
+            aplicarEstiloCondicao(this, itemLinha);
+        }
+    }
+    
+    private boolean deveDestacarItemEncalhado(ItemAnalise item) {
+        return configuracaoUsuario != null
+                && configuracaoUsuario.isFlagItensEncalhados()
+                && item != null
+                && !isLinhaRodapeTabela(item)
+                && item.isItemEncalhado()
+                && !item.isItemEncalhadoConfirmado();
+    }
+
+    private void atualizarPseudoClassesLinha(TableRow<ItemAnalise> row) {
+        if (row == null) {
+            return;
+        }
+
+        row.pseudoClassStateChanged(
+                PSEUDO_ITEM_ENCALHADO,
+                deveDestacarItemEncalhado(row.getItem())
+        );
+    }
     
     private void abrirTelaCondicao(ItemAnalise item) {
         executarComTratamento("Abrir tela de condição do item", () -> {
@@ -1145,58 +1964,128 @@ public class telaInicial extends Application {
                 return;
             }
 
+            List<ItemAnalise> itensParaAplicar = obterLinhasSelecionadasEditaveis();
+
+            if (!itensParaAplicar.contains(item)) {
+                itensParaAplicar.clear();
+                itensParaAplicar.add(item);
+            }
+
             TelaCondicao telaCondicao = new TelaCondicao();
             boolean alterou = telaCondicao.exibir(tabela.getScene().getWindow(), item);
 
-            if (alterou) {
-                tabela.refresh();
+            if (!alterou) {
+                return;
             }
+
+            CondicaoVenda condicaoAplicada = item.getCondicaoVenda();
+            String corEspecialFundo = item.getCorEspecialFundo();
+            String corEspecialTexto = item.getCorEspecialTexto();
+
+            for (ItemAnalise itemSelecionado : itensParaAplicar) {
+                if (itemSelecionado == item) {
+                    continue;
+                }
+
+                itemSelecionado.setCondicaoVenda(condicaoAplicada);
+                itemSelecionado.setCorEspecialFundo(corEspecialFundo);
+                itemSelecionado.setCorEspecialTexto(corEspecialTexto);
+            }
+
+            tabela.refresh();
         });
     }
     
     private void aplicarEstiloCondicao(TableCell<ItemAnalise, ?> cell, ItemAnalise item) {
-    if (cell == null) {
-        return;
+        if (cell == null) {
+            return;
+        }
+
+        if (item == null || isLinhaRodapeTabela(item)) {
+            cell.setStyle("");
+            return;
+        }
+        
+        if (deveDestacarItemEncalhado(item)) {
+            boolean linhaSelecionada = cell.getTableRow() != null
+                    && cell.getTableRow().isSelected();
+
+            String corFundo = linhaSelecionada ? "#F4A3A8" : "#FFC7CE";
+
+            cell.setStyle(
+                    "-fx-background-color: " + corFundo + ";" +
+                    "-fx-text-fill: #9C0006;" +
+                    "-fx-font-weight: bold;"
+            );
+            return;
+        }
+
+        CondicaoVenda condicao = item.getCondicaoVenda();
+
+        if (condicao == null || condicao == CondicaoVenda.NORMAL) {
+            cell.setStyle("");
+            return;
+        }
+
+        String corFundo;
+        String corTexto;
+
+        if (condicao == CondicaoVenda.ESPECIAL) {
+            corFundo = item.getCorEspecialFundo();
+            corTexto = item.getCorEspecialTexto();
+        } else {
+            corFundo = condicao.getCorFundo();
+            corTexto = condicao.getCorTexto();
+        }
+
+        if (corFundo == null || corFundo.isBlank()) {
+            cell.setStyle("");
+            return;
+        }
+
+        boolean linhaSelecionada = cell.getTableRow() != null
+                && cell.getTableRow().isSelected();
+
+        String corFundoAplicada = linhaSelecionada
+                ? escurecerCorHex(corFundo, 0.82)
+                : corFundo;
+
+        cell.setStyle(
+                "-fx-background-color: " + corFundoAplicada + ";" +
+                "-fx-text-fill: " + corTexto + ";" +
+                "-fx-font-weight: bold;"
+        );
+    }
+    
+    private String escurecerCorHex(String cor, double fator) {
+        if (cor == null || !cor.matches("#[0-9a-fA-F]{6}")) {
+            return cor;
+        }
+
+        int r = Integer.parseInt(cor.substring(1, 3), 16);
+        int g = Integer.parseInt(cor.substring(3, 5), 16);
+        int b = Integer.parseInt(cor.substring(5, 7), 16);
+
+        r = limitarCanalCor((int) Math.round(r * fator));
+        g = limitarCanalCor((int) Math.round(g * fator));
+        b = limitarCanalCor((int) Math.round(b * fator));
+
+        return String.format("#%02X%02X%02X", r, g, b);
     }
 
-    if (item == null || isLinhaRodapeTabela(item)) {
-        cell.setStyle("");
-        return;
+    private int limitarCanalCor(int valor) {
+        return Math.max(0, Math.min(255, valor));
     }
-
-    CondicaoVenda condicao = item.getCondicaoVenda();
-
-    if (condicao == null || condicao == CondicaoVenda.NORMAL) {
-        cell.setStyle("");
-        return;
-    }
-
-    String corFundo;
-    String corTexto;
-
-    if (condicao == CondicaoVenda.ESPECIAL) {
-        corFundo = item.getCorEspecialFundo();
-        corTexto = item.getCorEspecialTexto();
-    } else {
-        corFundo = condicao.getCorFundo();
-        corTexto = condicao.getCorTexto();
-    }
-
-    if (corFundo == null || corFundo.isBlank()) {
-        cell.setStyle("");
-        return;
-    }
-
-    cell.setStyle(
-            "-fx-background-color: " + corFundo + ";" +
-            "-fx-text-fill: " + corTexto + ";" +
-            "-fx-font-weight: bold;"
-    );
-}
 
     private String montarEstiloCampoEditavelPorCondicao(ItemAnalise item) {
     if (item == null || isLinhaRodapeTabela(item)) {
         return "";
+    }
+    
+    if (deveDestacarItemEncalhado(item)) {
+        return "-fx-background-color: transparent;" +
+                "-fx-text-fill: #9C0006;" +
+                "-fx-font-weight: bold;";
     }
 
     CondicaoVenda condicao = item.getCondicaoVenda();
@@ -1231,9 +2120,30 @@ public class telaInicial extends Application {
         }
     }
 
+    private BigDecimal calcularValorTabelaLinha(ItemAnalise item) {
+        if (item == null || isLinhaRodapeTabela(item)) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal quantidade = BigDecimal.valueOf(item.getQuantidade());
+
+        if (quantidade.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal precoPadraoVenda = valorSeguro(item.getPrecoPadraoVenda());
+
+        if (precoPadraoVenda.compareTo(BigDecimal.ZERO) > 0) {
+            return precoPadraoVenda.multiply(quantidade);
+        }
+
+        return valorSeguro(item.getValorUnitario()).multiply(quantidade);
+    }
+    
     private void recalcularResumo() {
     BigDecimal totalProposta = BigDecimal.ZERO;
     BigDecimal totalIpiProposta = BigDecimal.ZERO;
+    BigDecimal totalTabela = BigDecimal.ZERO;
 
     BigDecimal resultadoAtual = BigDecimal.ZERO;
     BigDecimal totalIpiAtual = BigDecimal.ZERO;
@@ -1252,9 +2162,12 @@ public class telaInicial extends Application {
 
         BigDecimal valorTotal = valorSeguro(item.getValorTotal());
         BigDecimal quantidade = BigDecimal.valueOf(item.getQuantidade());
+        BigDecimal valorTabelaLinha = calcularValorTabelaLinha(item);
 
         BigDecimal custoAtualLinha = valorSeguro(item.getCustoAtual()).multiply(quantidade);
         BigDecimal custoAnteriorLinha = valorSeguro(item.getCustoAnterior()).multiply(quantidade);
+        
+        totalTabela = totalTabela.add(valorTabelaLinha);
 
         totalProposta = totalProposta.add(valorTotal);
         totalIpiProposta = totalIpiProposta.add(valorSeguro(item.getIpiProposta()));
@@ -1265,6 +2178,8 @@ public class telaInicial extends Application {
         resultadoAnterior = resultadoAnterior.add(valorTotal.subtract(custoAnteriorLinha));
         totalIpiAnterior = totalIpiAnterior.add(valorSeguro(item.getIpiAnterior()));
     }
+    
+    totalTabelaLabel.setText(formatarMoeda(totalTabela));
 
     totalPropostaLabel.setText(formatarMoeda(totalProposta));
     totalComIpiLabel.setText(formatarMoeda(totalProposta.add(totalIpiProposta)));
@@ -1513,45 +2428,39 @@ public class telaInicial extends Application {
         }
 
         private String formatarValorEditavel(BigDecimal valor) {
-            if (valor == null || valor.compareTo(BigDecimal.ZERO) == 0) {
-                return "";
-            }
+    if (valor == null || valor.compareTo(BigDecimal.ZERO) == 0) {
+        return "";
+    }
 
-            return valor.setScale(2, RoundingMode.HALF_UP)
-                    .toString()
-                    .replace(".", ",");
-        }
+    return formatarMoeda(valor);
+}
 
         private BigDecimal converterValor(String texto) {
-            if (texto == null || texto.trim().isEmpty()) {
-                return BigDecimal.ZERO;
-            }
+    if (texto == null || texto.trim().isEmpty()) {
+        return BigDecimal.ZERO;
+    }
 
-            try {
-                return new BigDecimal(
-                        texto.trim()
-                                .replace("R$", "")
-                                .replace(".", "")
-                                .replace(",", ".")
-                );
-            } catch (NumberFormatException e) {
-                return BigDecimal.ZERO;
-            }
-        }
+    String normalizado = texto
+            .replace("R$", "")
+            .replace("\u00A0", " ")
+            .trim();
+
+    if (normalizado.contains(",")) {
+        normalizado = normalizado
+                .replace(".", "")
+                .replace(",", ".");
+    }
+
+    normalizado = normalizado.trim();
+
+    try {
+        return new BigDecimal(normalizado);
+    } catch (NumberFormatException e) {
+        return BigDecimal.ZERO;
+    }
+}
     }
     
-    private boolean textoTemMultiplasCelulas(String texto) {
-        if (texto == null) {
-            return false;
-        }
-
-        return texto.contains("\n")
-                || texto.contains("\r")
-                || texto.contains("\t")
-                || texto.contains("\u2028")
-                || texto.contains("\u2029");
-    }
-
     private void colarQuantidadesEmLote(String textoColado, int indiceInicial) {
     List<String> valores = extrairPrimeiraColunaColada(textoColado);
 
@@ -1581,24 +2490,6 @@ public class telaInicial extends Application {
     private boolean isAtalhoColar(KeyEvent event) {
         return event.getCode() == KeyCode.V
                 && (event.isShortcutDown() || event.isControlDown());
-    }
-    
-    private boolean eventoVeioDeCampoTexto(KeyEvent event) {
-        if (!(event.getTarget() instanceof Node node)) {
-            return false;
-        }
-
-        Node atual = node;
-
-        while (atual != null) {
-            if (atual instanceof TextInputControl) {
-                return true;
-            }
-
-            atual = atual.getParent();
-        }
-
-        return false;
     }
     
     private void tratarColagemGlobalTabela(KeyEvent event) {
@@ -1694,7 +2585,8 @@ public class telaInicial extends Application {
         }
 
         if (tabela.getFocusModel() != null && tabela.getFocusModel().getFocusedCell() != null) {
-            TableColumn<ItemAnalise, ?> coluna = tabela.getFocusModel().getFocusedCell().getTableColumn();
+            @SuppressWarnings("unchecked")
+			TableColumn<ItemAnalise, ?> coluna = tabela.getFocusModel().getFocusedCell().getTableColumn();
 
             if (coluna != null) {
                 return coluna.getText();
@@ -1826,6 +2718,7 @@ public class telaInicial extends Application {
                 item.setCodigo(codigo);
                 item.aplicarDadosItem(itemService.buscarPorCodigo(codigo).orElse(null));
                 recalcularItem(item);
+                atualizarVisibilidadeColunaOkEncalhado();
 
                 indiceLinha++;
             }
@@ -1928,6 +2821,7 @@ public class telaInicial extends Application {
     private void preCarregarBasesAoIniciar() {
         mostrarOverlayAtualizacao(true);
 
+        ultimaAtualizacaoLabel.setText("Última atualização:\natualizando...");
         Task<Void> tarefa = new Task<>() {
             @Override
             protected Void call() {
@@ -1937,11 +2831,14 @@ public class telaInicial extends Application {
         };
 
         tarefa.setOnSucceeded(event -> {
+            atualizarTextoUltimaAtualizacao();
             mostrarOverlayAtualizacao(false);
         });
 
         tarefa.setOnFailed(event -> {
             Throwable erro = tarefa.getException();
+
+            ultimaAtualizacaoLabel.setText("Última atualização:\nfalhou");
 
             mostrarErro(
                     "Inicialização > pré-carregamento das bases",
@@ -2210,10 +3107,6 @@ public class telaInicial extends Application {
             this(moeda, false, false);
         }
 
-        public BigDecimalTableCell(boolean moeda, boolean exibirNoRodape) {
-            this(moeda, exibirNoRodape, false);
-        }
-
         public BigDecimalTableCell(boolean moeda, boolean exibirNoRodape, boolean aplicarCondicaoVisual) {
             this.moeda = moeda;
             this.exibirNoRodape = exibirNoRodape;
@@ -2274,7 +3167,9 @@ public class telaInicial extends Application {
             ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
 
             if (isLinhaRodapeTabela(itemLinha)) {
-                setText("");
+                BigDecimal valorRodape = valor == null ? BigDecimal.ZERO : valor;
+                setText(formatarMoeda(valorRodape));
+                setStyle("");
                 return;
             }
 
@@ -2298,27 +3193,56 @@ public class telaInicial extends Application {
         }
     }
 
-    private class MargemTableCell extends BigDecimalTableCell {
+    private class MargemTableCell extends TableCell<ItemAnalise, BigDecimal> {
+
         public MargemTableCell() {
-            super(false, true);
+            setAlignment(Pos.CENTER_RIGHT);
         }
 
         @Override
-        protected void updateItem(BigDecimal item, boolean empty) {
-            super.updateItem(item, empty);
+        protected void updateItem(BigDecimal margem, boolean empty) {
+            super.updateItem(margem, empty);
+
             getStyleClass().removeAll("margem-baixa", "margem-media", "margem-boa");
+
+            if (empty) {
+                setText("");
+                setStyle("");
+                return;
+            }
 
             ItemAnalise itemLinha = getTableRow() == null ? null : getTableRow().getItem();
 
-            if (!empty && item != null && !isLinhaRodapeTabela(itemLinha)) {
-                if (item.compareTo(new BigDecimal("20")) < 0) {
-                    getStyleClass().add("margem-baixa");
-                } else if (item.compareTo(new BigDecimal("35")) < 0) {
-                    getStyleClass().add("margem-media");
-                } else {
-                    getStyleClass().add("margem-boa");
-                }
+            if (isLinhaRodapeTabela(itemLinha)) {
+                setText(formatarMargemDecimal(margem));
+                setStyle("");
+                return;
             }
+
+            if (!linhaTemCodigo(itemLinha)) {
+                setText("");
+                setStyle("");
+                return;
+            }
+
+            BigDecimal margemSegura = margem == null ? BigDecimal.ZERO : margem;
+
+            setText(formatarMargemDecimal(margemSegura));
+            setStyle("");
+
+            if (margemSegura.compareTo(new BigDecimal("0.20")) < 0) {
+                getStyleClass().add("margem-baixa");
+            } else if (margemSegura.compareTo(new BigDecimal("0.35")) < 0) {
+                getStyleClass().add("margem-media");
+            } else {
+                getStyleClass().add("margem-boa");
+            }
+        }
+
+        private boolean linhaTemCodigo(ItemAnalise item) {
+            return item != null
+                    && item.getCodigo() != null
+                    && !item.getCodigo().trim().isEmpty();
         }
     }
     

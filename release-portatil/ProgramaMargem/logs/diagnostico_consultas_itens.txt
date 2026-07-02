@@ -1,0 +1,72 @@
+
+=================================================
+Data/Hora: 2026-07-01T15:48:36.634405900
+Status: Consulta OK.
+Código pesquisado: MMR1814.1031
+Código retornado: MMR1814.1031
+Descrição: REDUCAO CONCENTRICA OD PI/PE 304 - 31 - 63,50 2.1/2P X 50,80 2P
+Preço padrão venda: 99.7716
+IPI: 3.25
+Custo atual: 17.066711055392403
+Registro custo atual: RPLA172-25
+Data custo atual: 2026-03-12
+Custo anterior: 12.726799999999999
+Registro custo anterior: RPLA252-25
+Data custo anterior: 2026-01-22
+Custo Promob: 13.2621
+Registro custo Promob: PROMOB
+Data custo Promob: 2025-12-12
+
+=================================================
+Data/Hora: 2026-07-01T15:48:36.638315100
+Status: Consulta OK.
+Código pesquisado: MRT3803.0801
+Código retornado: MRT3803.0801
+Descrição: MONITOR DE POSICAO APL210 PARA ATUADOR PNEUMATICO
+Preço padrão venda: 300.0364
+IPI: 0.0
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 63.301
+Registro custo Promob: PROMOB
+Data custo Promob: 2026-06-12
+
+=================================================
+Data/Hora: 2026-07-01T15:48:36.639313300
+Status: Consulta OK.
+Código pesquisado: MMP0201.1004
+Código retornado: MMP0201.1004
+Descrição: ANEL WAFER MAIOR INOX 304 DN015-1/2 P ASTM A351 GR. CF8 M862
+Preço padrão venda: 0.0
+IPI: 0.0
+Custo atual: 0
+Registro custo atual: 
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null
+
+=================================================
+Data/Hora: 2026-07-01T15:48:36.639313300
+Status: Consulta OK.
+Código pesquisado: MPR3423.1504
+Código retornado: MPR3423.1504
+Descrição: ADAPTADOR TIPO N/MACHO BSP - 1TC 304  - 04 - 12,70(1/2P)
+Preço padrão venda: 174.62
+IPI: 3.25
+Custo atual: 54.4319
+Registro custo atual: METAL.DB
+Data custo atual: null
+Custo anterior: 0
+Registro custo anterior: 
+Data custo anterior: null
+Custo Promob: 0
+Registro custo Promob: 
+Data custo Promob: null

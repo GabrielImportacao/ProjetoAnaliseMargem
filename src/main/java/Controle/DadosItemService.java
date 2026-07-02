@@ -12,9 +12,14 @@ public class DadosItemService {
     private final ItemRepository itemRepository;
     private final CustoRepository custoRepository;
     private final CustoPromobRepository custoPromobRepository;
+    private final ItemNfsRepository itemNfsRepository;
     
     
     public void preCarregarBases() {
+        if (itemRepository instanceof ItemRepositorySqlite repositorySqliteItens) {
+            repositorySqliteItens.preCarregarCache();
+        }
+
         if (itemRepository instanceof ItemRepositoryXlsb repositoryXlsb) {
             repositoryXlsb.preCarregarCache();
         }
@@ -26,9 +31,17 @@ public class DadosItemService {
         if (custoPromobRepository instanceof CustoPromobRepositorySqlite repositoryPromobSqlite) {
             repositoryPromobSqlite.preCarregarCache();
         }
+        
+        if (itemNfsRepository instanceof ItemNfsRepositorySqlite repositoryItemNfsSqlite) {
+            repositoryItemNfsSqlite.preCarregarCache();
+        }
     }
 
     public void recarregarBases() {
+        if (itemRepository instanceof ItemRepositorySqlite repositorySqliteItens) {
+            repositorySqliteItens.limparCache();
+        }
+
         if (itemRepository instanceof ItemRepositoryXlsb repositoryXlsb) {
             repositoryXlsb.limparCache();
         }
@@ -40,14 +53,19 @@ public class DadosItemService {
         if (custoPromobRepository instanceof CustoPromobRepositorySqlite repositoryPromobSqlite) {
             repositoryPromobSqlite.limparCache();
         }
+        
+        if (itemNfsRepository instanceof ItemNfsRepositorySqlite repositoryItemNfsSqlite) {
+            repositoryItemNfsSqlite.limparCache();
+        }
 
         preCarregarBases();
     }
 
     public DadosItemService() {
-        this.itemRepository = new ItemRepositoryXlsb();
+    	this.itemRepository = new ItemRepositorySqlite();
         this.custoRepository = new CustoRepositorySqlite();
         this.custoPromobRepository = new CustoPromobRepositorySqlite();
+        this.itemNfsRepository = new ItemNfsRepositorySqlite();
     }
 
     public DadosItemService(
@@ -55,9 +73,24 @@ public class DadosItemService {
             CustoRepository custoRepository,
             CustoPromobRepository custoPromobRepository
     ) {
+        this(
+                itemRepository,
+                custoRepository,
+                custoPromobRepository,
+                new ItemNfsRepositorySqlite()
+        );
+    }
+
+    public DadosItemService(
+            ItemRepository itemRepository,
+            CustoRepository custoRepository,
+            CustoPromobRepository custoPromobRepository,
+            ItemNfsRepository itemNfsRepository
+    ) {
         this.itemRepository = itemRepository;
         this.custoRepository = custoRepository;
         this.custoPromobRepository = custoPromobRepository;
+        this.itemNfsRepository = itemNfsRepository;
     }
     
     public Optional<BigDecimal> buscarPrecoPadraoVendaPorCodigo(String codigoItem) {
@@ -81,6 +114,22 @@ public class DadosItemService {
 
         return Optional.of(precoLiquidoAtual.multiply(new BigDecimal("2")));
     }
+    
+    private boolean calcularItemEncalhado(Optional<HistoricoSaidaItem> ultimaSaidaEncontrada) {
+        if (ultimaSaidaEncontrada == null || ultimaSaidaEncontrada.isEmpty()) {
+            return false;
+        }
+
+        LocalDate dataUltimaSaida = ultimaSaidaEncontrada.get().getDataSaida();
+
+        if (dataUltimaSaida == null) {
+            return false;
+        }
+
+        LocalDate limite = LocalDate.now().minusMonths(6);
+
+        return !dataUltimaSaida.isAfter(limite);
+    }
 
     public Optional<DadosItemConsulta> buscarDadosCompletosPorCodigo(String codigoItem) {
         if (codigoItem == null || codigoItem.isBlank()) {
@@ -103,6 +152,15 @@ public class DadosItemService {
 
         Optional<CustoPromobItem> custoPromobEncontrado =
                 custoPromobRepository.buscarCustoMaisRecentePorItem(codigoItem);
+        
+        Optional<HistoricoSaidaItem> ultimaSaidaEncontrada =
+                itemNfsRepository.buscarUltimaSaidaPorItem(codigoItem);
+
+        LocalDate dataUltimaSaida = ultimaSaidaEncontrada
+                .map(HistoricoSaidaItem::getDataSaida)
+                .orElse(null);
+
+        boolean itemEncalhado = calcularItemEncalhado(ultimaSaidaEncontrada);
 
         CustoResolvido custoAtual = resolverCustoAtual(item, historicoCusto, itemImportado);
         CustoResolvido custoAnterior = resolverCustoAnterior(historicoCusto, itemImportado);
@@ -131,7 +189,10 @@ public class DadosItemService {
                 custoAnterior.custo(),
                 custoAnterior.registro(),
                 custoAnterior.data(),
-                custoAnterior.fonte()
+                custoAnterior.fonte(),
+
+                dataUltimaSaida,
+                itemEncalhado
         );
 
         return Optional.of(dados);
@@ -246,7 +307,8 @@ public class DadosItemService {
 
         return codigoNormalizado.startsWith("MMR")
                 || codigoNormalizado.startsWith("MSC")
-                || codigoNormalizado.startsWith("MPR");
+                || codigoNormalizado.startsWith("MPR")
+        		|| codigoNormalizado.startsWith("MPA");
     }
     
     private record CustoResolvido(
