@@ -25,6 +25,13 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
+import javafx.scene.Group;
+
+import javafx.scene.transform.Scale;
+
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -84,7 +91,7 @@ public class telaInicial extends Application {
     private final ObservableList<ItemAnalise> itens = FXCollections.observableArrayList();
     private final LayoutTabelaService layoutTabelaService = new LayoutTabelaService();
     private final EstadoTabelaService estadoTabelaService = new EstadoTabelaService();
-
+    
     private final Label totalPropostaLabel = new Label("R$ 0,00");
     private final Label resultadoAtualComIpiLabel = new Label("R$ 0,00");
     private final Label resultadoAnteriorComIpiLabel = new Label("R$ 0,00");
@@ -95,13 +102,17 @@ public class telaInicial extends Application {
     private final ComboBox<EstadoInfo> estadoCombo = new ComboBox<>();
     private final Label baseEstadoLabel = new Label("0,00%");
     
+    private StackPane rootComOverlayPrincipal;
+    private final Scale escalaInterface = new Scale(1, 1, 0, 0);
+    
     private final Label ultimaAtualizacaoLabel = new Label("Última atualização: --/--/----\nàs --:--");
-        
+    
     private TableView<ItemAnalise> tabela;
     private static final double ALTURA_LINHA_TABELA = 24;
     private static final double ALTURA_CABECALHO_TABELA = 42;
     private static final double ALTURA_BARRA_HORIZONTAL = 18;
     private static final double MARGEM_SEGURANCA_TABELA = 12;
+    private static final double FOLGA_INTERNA_TABELA = 4;
     
     private static final String CODIGO_LINHA_RODAPE_TABELA = "__RODAPE_TABELA__";
     private final ItemAnalise linhaRodapeTabela = new ItemAnalise();
@@ -114,7 +125,7 @@ public class telaInicial extends Application {
     private static final String COLUNA_CODIGO = "CÓDIGO";
     private static final String COLUNA_QUANTIDADE = "QUANTIDADE";
     private static final String COLUNA_VALOR_UNITARIO = "VALOR UNITÁRIO";
-
+    
     private int indiceLinhaFocoPendente = -1;
     private String colunaFocoPendente = null;
     private boolean colagemEmLoteEmAndamento = false;    
@@ -128,9 +139,12 @@ public class telaInicial extends Application {
     private static final PseudoClass PSEUDO_ITEM_ENCALHADO =
             PseudoClass.getPseudoClass("item-encalhado");
     
+    private Group grupoConteudoZoom;
+    private ScrollPane scrollConteudoPrincipal;
+    
     private Timeline atualizacaoAutomaticaTimeline;
     private boolean atualizacaoDadosEmAndamento = false;
-
+    
     private static final Duration INTERVALO_ATUALIZACAO_AUTOMATICA = Duration.hours(1);
     private static final DateTimeFormatter FORMATADOR_DATA_ATUALIZACAO =
             DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -138,17 +152,22 @@ public class telaInicial extends Application {
             DateTimeFormatter.ofPattern("HH:mm");
     
     private TableColumn<ItemAnalise, Void> okEncalhadoCol;
-
+    private TableColumn<ItemAnalise, String> custoVerdadeiroGrupoCol;
+    
+    private final DoubleProperty fatorZoomInterfaceProperty = new SimpleDoubleProperty(1.0);
+    
     public static void main(String[] args) {
         launch(args);
     }
-
+    
+    
+    
     private void tratarNavegacaoCampoEditavel(
         KeyEvent event,
         int indiceAtual,
         String colunaAtual,
         Runnable confirmarValorAtual
-) {
+    		) {
     KeyCode tecla = event.getCode();
 
     boolean teclaVertical = tecla == KeyCode.ENTER
@@ -196,6 +215,52 @@ public class telaInicial extends Application {
         moverFocoHorizontal(indiceAtual, colunaAtual, false);
     }
 }
+    
+    private int obterZoomInterfaceSeguro() {
+        if (configuracaoUsuario == null) {
+            return 100;
+        }
+
+        int zoom = configuracaoUsuario.getZoomInterface();
+
+        if (zoom < 50) {
+            return 50;
+        }
+
+        if (zoom > 200) {
+            return 200;
+        }
+
+        return zoom;
+    }
+
+    private double obterFatorZoomInterface() {
+        return obterZoomInterfaceSeguro() / 100.0;
+    }
+
+    private void aplicarZoomInterface() {
+        double fator = obterFatorZoomInterface();
+
+        fatorZoomInterfaceProperty.set(fator);
+
+        escalaInterface.setX(fator);
+        escalaInterface.setY(fator);
+
+        Platform.runLater(() -> {
+            if (rootComOverlayPrincipal != null) {
+                rootComOverlayPrincipal.requestLayout();
+            }
+
+            if (grupoConteudoZoom != null) {
+                grupoConteudoZoom.requestLayout();
+            }
+
+            if (scrollConteudoPrincipal != null) {
+                scrollConteudoPrincipal.requestLayout();
+            }
+        });
+    }
+    
     private int obterIndiceRodapeTabela() {
         int indiceRodape = itens.indexOf(linhaRodapeTabela);
 
@@ -334,51 +399,186 @@ public class telaInicial extends Application {
     
     @Override
     public void start(Stage stage) {
-    	TratadorErros.instalarHandlerGlobal();
-    	DiagnosticoAmbiente.registrarAmbienteInicial();
+        TratadorErros.instalarHandlerGlobal();
+        DiagnosticoAmbiente.registrarAmbienteInicial();
 
         try {
             prepararDadosIniciais();
         } catch (Exception e) {
-            TratadorErros.tratar(stage, "Inicialização > preparar dados iniciais", e);
+            TratadorErros.tratar(
+                    stage,
+                    "Inicialização > preparar dados iniciais",
+                    e
+            );
             return;
         }
 
-        BorderPane root = new BorderPane();
-        root.getStyleClass().add("root-app");
+        /*
+         * Cabeçalho fixo:
+         * logo, título e engrenagem não recebem zoom.
+         */
+        HBox cabecalhoFixo = criarCabecalhoFixo();
 
-        VBox topo = criarTopo();
+        /*
+         * Área que receberá zoom.
+         */
+        BorderPane conteudoComZoom = new BorderPane();
+        conteudoComZoom.getStyleClass().add("root-app");
+
+        VBox topoComZoom = criarTopoComZoom();
+
         TableView<ItemAnalise> tabelaCriada = criarTabela();
         HBox barraAcoesTabela = criarBarraAcoesTabela();
 
-        VBox areaCentral = new VBox(0, barraAcoesTabela, tabelaCriada);
+        VBox areaCentral = new VBox(
+                0,
+                barraAcoesTabela,
+                tabelaCriada
+        );
+
         areaCentral.setAlignment(Pos.TOP_LEFT);
         VBox.setVgrow(tabelaCriada, Priority.NEVER);
 
         HBox rodape = criarRodape();
-        root.setTop(topo);
-        root.setCenter(areaCentral);
-        root.setBottom(rodape);
 
-        StackPane rootComOverlay = new StackPane(root, criarOverlayAtualizacao());
-        
-        rootComOverlay.setFocusTraversable(true);
+        conteudoComZoom.setTop(topoComZoom);
+        conteudoComZoom.setCenter(areaCentral);
+        conteudoComZoom.setBottom(rodape);
+
+        /*
+         * Overlay e conteúdo principal recebem zoom.
+         * O cabeçalho fixo está fora deste StackPane.
+         */
+        rootComOverlayPrincipal = new StackPane(
+                conteudoComZoom,
+                criarOverlayAtualizacao()
+        );
+
+        rootComOverlayPrincipal.setFocusTraversable(true);
+        rootComOverlayPrincipal
+                .getTransforms()
+                .setAll(escalaInterface);
+
+        /*
+         * Viewport da área que recebe zoom.
+         */
+        /*
+         * O Group faz o ScrollPane considerar o tamanho visual
+         * do conteúdo depois da aplicação do zoom.
+         */
+        grupoConteudoZoom = new Group(
+                rootComOverlayPrincipal
+        );
+
+        /*
+         * Somente o corpo da tela possui navegação.
+         * O cabeçalho com logo, título e configurações permanece fixo.
+         */
+        scrollConteudoPrincipal = new ScrollPane(
+                grupoConteudoZoom
+        );
+
+        scrollConteudoPrincipal.setFitToWidth(false);
+        scrollConteudoPrincipal.setFitToHeight(false);
+        scrollConteudoPrincipal.setPannable(true);
+        scrollConteudoPrincipal.setFocusTraversable(false);
+
+        scrollConteudoPrincipal.setHbarPolicy(
+                ScrollPane.ScrollBarPolicy.AS_NEEDED
+        );
+
+        scrollConteudoPrincipal.setVbarPolicy(
+                ScrollPane.ScrollBarPolicy.NEVER
+        );
+
+        scrollConteudoPrincipal.setStyle(
+                "-fx-background-color: transparent;" +
+                "-fx-background: transparent;" +
+                "-fx-padding: 0;"
+        );
+
+        /*
+         * Mantém o corpo preenchendo pelo menos a área disponível.
+         * Acima de 100%, o tamanho mínimo natural gera a navegação
+         * horizontal sem afetar o cabeçalho fixo.
+         */
+        scrollConteudoPrincipal.viewportBoundsProperty().addListener(
+                (obs, valorAnterior, valorAtual) -> {
+                    double fator = obterFatorZoomInterface();
+
+                    if (fator <= 0) {
+                        fator = 1.0;
+                    }
+
+                    double larguraLogica = Math.max(
+                            1180,
+                            valorAtual.getWidth() / fator
+                    );
+
+                    double alturaLogica = Math.max(
+                            1,
+                            valorAtual.getHeight() / fator
+                    );
+
+                    rootComOverlayPrincipal.setMinSize(
+                            larguraLogica,
+                            alturaLogica
+                    );
+
+                    rootComOverlayPrincipal.setPrefSize(
+                            larguraLogica,
+                            alturaLogica
+                    );
+
+                    rootComOverlayPrincipal.setMaxSize(
+                            larguraLogica,
+                            alturaLogica
+                    );
+
+                    rootComOverlayPrincipal.resize(
+                            larguraLogica,
+                            alturaLogica
+                    );
+                }
+        );
+
+        /*
+         * Estrutura final:
+         * cabeçalho fixo em cima e corpo rolável embaixo.
+         */
+        BorderPane raizCena = new BorderPane();
+        raizCena.getStyleClass().add("root-app");
+
+        raizCena.setTop(cabecalhoFixo);
+        raizCena.setCenter(scrollConteudoPrincipal);
 
         System.out.println("JAR NOVO - TESTE CSS");
-        Scene scene = new Scene(rootComOverlay, 1180, 680);
+
+        Scene scene = new Scene(
+                raizCena,
+                1180,
+                680
+        );
+
         scene.getStylesheets().add(
                 localizarRecurso("estilo.css").toExternalForm()
         );
-        
-        scene.addEventFilter(KeyEvent.KEY_PRESSED, this::tratarColagemGlobalTabela);
+
+        scene.addEventFilter(
+                KeyEvent.KEY_PRESSED,
+                this::tratarColagemGlobalTabela
+        );
 
         scene.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
             if (!(event.getTarget() instanceof Node alvo)) {
                 return;
             }
 
-            boolean clicouNaTabela = cliqueFoiDentroDoNo(alvo, tabela);
-            boolean clicouNoRodape = cliqueFoiDentroDoNo(alvo, rodape);
+            boolean clicouNaTabela =
+                    cliqueFoiDentroDoNo(alvo, tabela);
+
+            boolean clicouNoRodape =
+                    cliqueFoiDentroDoNo(alvo, rodape);
 
             if (!clicouNaTabela && !clicouNoRodape) {
                 tabela.getSelectionModel().clearSelection();
@@ -387,34 +587,51 @@ public class telaInicial extends Application {
                     tabela.getFocusModel().focus(-1);
                 }
 
-                rootComOverlay.requestFocus();
+                rootComOverlayPrincipal.requestFocus();
             }
         });
-        
 
+        /*
+         * Altura da tabela calculada somente dentro da área ampliável.
+         */
         tabelaCriada.prefHeightProperty().bind(
                 Bindings.createDoubleBinding(
-                        () -> calcularAlturaTabela(root, topo, rodape, barraAcoesTabela),
+                        () -> calcularAlturaTabela(
+                                conteudoComZoom,
+                                topoComZoom,
+                                rodape,
+                                barraAcoesTabela
+                        ),
                         itens,
-                        root.heightProperty(),
-                        topo.heightProperty(),
+                        conteudoComZoom.heightProperty(),
+                        topoComZoom.heightProperty(),
                         rodape.heightProperty(),
-                        barraAcoesTabela.heightProperty()
+                        barraAcoesTabela.heightProperty(),
+                        fatorZoomInterfaceProperty
                 )
         );
 
-        tabelaCriada.minHeightProperty().bind(tabelaCriada.prefHeightProperty());
-        tabelaCriada.maxHeightProperty().bind(tabelaCriada.prefHeightProperty());
+        tabelaCriada.minHeightProperty().bind(
+                tabelaCriada.prefHeightProperty()
+        );
+
+        tabelaCriada.maxHeightProperty().bind(
+                tabelaCriada.prefHeightProperty()
+        );
 
         stage.setTitle("Programa de Análise de Margem");
         stage.setScene(scene);
         stage.setMinWidth(1050);
         stage.setMinHeight(600);
+
         stage.setOnCloseRequest(event -> {
             salvarEstadoTabelaAtual();
             pararAtualizacaoAutomatica();
         });
+
         stage.show();
+
+        aplicarZoomInterface();
         iniciarAtualizacaoAutomatica();
         preCarregarBasesAoIniciar();
     }
@@ -521,6 +738,9 @@ public class telaInicial extends Application {
 
         BigDecimal custoTotalAtual = BigDecimal.ZERO;
         BigDecimal valorTotalAtual = BigDecimal.ZERO;
+        
+        BigDecimal custoTotalVerdadeiro = BigDecimal.ZERO;
+        BigDecimal valorTotalVerdadeiro = BigDecimal.ZERO;
 
         BigDecimal custoTotalPromob = BigDecimal.ZERO;
         BigDecimal valorTotalPromob = BigDecimal.ZERO;
@@ -546,6 +766,13 @@ public class telaInicial extends Application {
                 );
                 valorTotalAtual = valorTotalAtual.add(valorTotalLinha);
             }
+            
+            if (custoValidoParaRodape(item.getCustoVerdadeiro(), valorTotalLinha, quantidade)) {
+                custoTotalVerdadeiro = custoTotalVerdadeiro.add(
+                        valorSeguro(item.getCustoVerdadeiro()).multiply(quantidadeDecimal)
+                );
+                valorTotalVerdadeiro = valorTotalVerdadeiro.add(valorTotalLinha);
+            }
 
             if (custoValidoParaRodape(item.getCustoPromob(), valorTotalLinha, quantidade)) {
                 custoTotalPromob = custoTotalPromob.add(
@@ -569,10 +796,14 @@ public class telaInicial extends Application {
         linhaRodapeTabela.setValorTotal(valorTotalProposta);
 
         linhaRodapeTabela.setCustoAtual(custoTotalAtual);
+        linhaRodapeTabela.setCustoVerdadeiro(custoTotalVerdadeiro);
         linhaRodapeTabela.setCustoPromob(custoTotalPromob);
         linhaRodapeTabela.setCustoAnterior(custoTotalAnterior);
 
         linhaRodapeTabela.setMargemAtual(calcularCustoSobreValor(custoTotalAtual, valorTotalAtual));
+        linhaRodapeTabela.setMargemVerdadeira(
+                calcularCustoSobreValor(custoTotalVerdadeiro, valorTotalVerdadeiro)
+        );
         linhaRodapeTabela.setMargemPromob(calcularCustoSobreValor(custoTotalPromob, valorTotalPromob));
         linhaRodapeTabela.setMargemAnterior(calcularCustoSobreValor(custoTotalAnterior, valorTotalAnterior));
 
@@ -835,80 +1066,157 @@ public class telaInicial extends Application {
         thread.setDaemon(true);
         thread.start();
     }
-    private VBox criarTopo() {
-        VBox topo = new VBox();
-        topo.getStyleClass().add("topo");
-
+       
+    private HBox criarCabecalhoFixo() {
         HBox cabecalho = new HBox(20);
+
         cabecalho.getStyleClass().add("cabecalho");
         cabecalho.setAlignment(Pos.CENTER_LEFT);
-        cabecalho.setPadding(new Insets(12, 14, 10, 14));cabecalho.setPadding(new Insets(10, 14, 8, 14));
+        cabecalho.setPadding(new Insets(10, 14, 8, 14));
         cabecalho.setMinHeight(72);
         cabecalho.setPrefHeight(72);
-        
-        
+        cabecalho.setMaxHeight(72);
+
         VBox logoBox = new VBox();
         logoBox.setAlignment(Pos.CENTER_LEFT);
         logoBox.setPrefWidth(150);
         logoBox.setMinWidth(150);
         logoBox.setMaxWidth(150);
 
-        ImageView logo = carregarIcone("logo-plasnox.png", 80, 48);
+        ImageView logo = carregarIcone(
+                "logo-plasnox.png",
+                80,
+                48
+        );
+
         logoBox.getChildren().add(logo);
 
-        Label titulo = new Label("ANÁLISE DE MARGEM EM ORÇAMENTO COMERCIAL");
+        Label titulo = new Label(
+                "ANÁLISE DE MARGEM EM ORÇAMENTO COMERCIAL"
+        );
+
         titulo.getStyleClass().add("titulo-principal");
-        HBox.setHgrow(titulo, Priority.ALWAYS);
-        titulo.setMaxWidth(Double.MAX_VALUE);
         titulo.setAlignment(Pos.CENTER);
+        titulo.setMaxWidth(Double.MAX_VALUE);
+
+        HBox.setHgrow(
+                titulo,
+                Priority.ALWAYS
+        );
 
         Button configButton = new Button();
-        configButton.setGraphic(carregarIcone("config.png", 18, 18));
+
+        configButton.setGraphic(
+                carregarIcone("config.png", 18, 18)
+        );
+
         configButton.getStyleClass().add("botao-config");
         configButton.setTooltip(new Tooltip("Configurações"));
-        configButton.setOnAction(event ->
-        		executarComTratamento("Botão CONFIGURAÇÕES", this::abrirTelaConfiguracoes)
-        		);
+        configButton.setFocusTraversable(false);
 
-        cabecalho.getChildren().addAll(logoBox, titulo, configButton);
+        configButton.setOnAction(event ->
+                executarComTratamento(
+                        "Botão CONFIGURAÇÕES",
+                        this::abrirTelaConfiguracoes
+                )
+        );
+
+        cabecalho.getChildren().addAll(
+                logoBox,
+                titulo,
+                configButton
+        );
+
+        return cabecalho;
+    }
+    
+    private VBox criarTopoComZoom() {
+        VBox topo = new VBox();
+        topo.getStyleClass().add("topo");
 
         HBox comandos = new HBox(18);
         comandos.getStyleClass().add("area-comandos");
         comandos.setAlignment(Pos.TOP_LEFT);
         comandos.setPadding(new Insets(8, 14, 8, 14));
         comandos.setFillHeight(false);
-        
 
         Button atualizarButton = new Button("ATUALIZAR DADOS");
-        atualizarButton.setGraphic(carregarIcone("atualizar.png", 14, 14));
+
+        atualizarButton.setGraphic(
+                carregarIcone("atualizar.png", 14, 14)
+        );
+
         atualizarButton.setContentDisplay(ContentDisplay.LEFT);
         atualizarButton.setGraphicTextGap(4);
         atualizarButton.getStyleClass().add("botao-acao");
+
         atualizarButton.setOnAction(event ->
-        	executarComTratamento("Botão ATUALIZAR DADOS", this::atualizarDados)
-        		);
+                executarComTratamento(
+                        "Botão ATUALIZAR DADOS",
+                        this::atualizarDados
+                )
+        );
+
+        atualizarButton.setMinWidth(190);
+        atualizarButton.setPrefWidth(190);
+        atualizarButton.setMaxWidth(190);
+
         ultimaAtualizacaoLabel.setStyle(
                 "-fx-font-size: 16px;" +
                 "-fx-font-weight: bold;" +
                 "-fx-text-fill: #555555;"
         );
+
         ultimaAtualizacaoLabel.setWrapText(false);
-        ultimaAtualizacaoLabel.setMinWidth(190);
+        ultimaAtualizacaoLabel.setTextOverrun(OverrunStyle.CLIP);
+
+        ultimaAtualizacaoLabel.setMinWidth(255);
+        ultimaAtualizacaoLabel.setPrefWidth(255);
+        ultimaAtualizacaoLabel.setMaxWidth(255);
 
         VBox atualizarBox = new VBox(3);
         atualizarBox.setAlignment(Pos.CENTER_LEFT);
-        atualizarBox.getChildren().addAll(atualizarButton, ultimaAtualizacaoLabel);
-        
-        MiniTabelaEstadoBase estadoBaseTabela = new MiniTabelaEstadoBase(estadoCombo, baseEstadoLabel);
 
-        Button valorPadraoButton = new Button("BUSCAR VALOR PADRÃO");
-        valorPadraoButton.setGraphic(carregarIcone("lupa.png", 14, 14));
-        valorPadraoButton.setContentDisplay(ContentDisplay.LEFT);
+        atualizarBox.setMinWidth(255);
+        atualizarBox.setPrefWidth(255);
+        atualizarBox.setMaxWidth(255);
+
+        atualizarBox.getChildren().addAll(
+                atualizarButton,
+                ultimaAtualizacaoLabel
+        );
+
+        MiniTabelaEstadoBase estadoBaseTabela =
+                new MiniTabelaEstadoBase(
+                        estadoCombo,
+                        baseEstadoLabel
+                );
+
+        Button valorPadraoButton =
+                new Button("BUSCAR VALOR PADRÃO");
+
+        valorPadraoButton.setGraphic(
+                carregarIcone("lupa.png", 14, 14)
+        );
+
+        valorPadraoButton.setContentDisplay(
+                ContentDisplay.LEFT
+        );
+
         valorPadraoButton.setGraphicTextGap(4);
         valorPadraoButton.getStyleClass().add("botao-busca");
+
         valorPadraoButton.setOnAction(event ->
-        	executarComTratamento("Botão BUSCAR VALOR PADRÃO", this::abrirTelaBuscaPreco)
-        		);
+                executarComTratamento(
+                        "Botão BUSCAR VALOR PADRÃO",
+                        this::abrirTelaBuscaPreco
+                )
+        );
+
+        valorPadraoButton.setMinWidth(220);
+        valorPadraoButton.setPrefWidth(220);
+        valorPadraoButton.setMaxWidth(220);
+        valorPadraoButton.setTextOverrun(OverrunStyle.CLIP);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -923,9 +1231,16 @@ public class telaInicial extends Application {
                 resultadoAnteriorComIpiLabel
         );
 
-        comandos.getChildren().addAll(atualizarBox, estadoBaseTabela, valorPadraoButton, spacer, resumo);
+        comandos.getChildren().addAll(
+                atualizarBox,
+                estadoBaseTabela,
+                valorPadraoButton,
+                spacer,
+                resumo
+        );
 
-        topo.getChildren().addAll(cabecalho, comandos);
+        topo.getChildren().add(comandos);
+
         return topo;
     }
         
@@ -1139,6 +1454,25 @@ public class telaInicial extends Application {
         dataCustoCol.getStyleClass().add("coluna-vermelha");
         dataCustoCol.setPrefWidth(110);
 
+        TableColumn<ItemAnalise, BigDecimal> margemVerdadeiraCol = new TableColumn<>("MARGEM VERD.");
+        margemVerdadeiraCol.setCellValueFactory(data -> data.getValue().margemVerdadeiraProperty());
+        margemVerdadeiraCol.setCellFactory(col -> new MargemTableCell());
+        margemVerdadeiraCol.getStyleClass().add("coluna-cinza");
+        margemVerdadeiraCol.setPrefWidth(125);
+
+        TableColumn<ItemAnalise, BigDecimal> custoVerdadeiroCol = new TableColumn<>("CUSTO");
+        custoVerdadeiroCol.setCellValueFactory(data ->
+                new ReadOnlyObjectWrapper<>(data.getValue().getCustoVerdadeiro())
+        );
+        custoVerdadeiroCol.setCellFactory(col -> new CustoTableCell());
+        custoVerdadeiroCol.getStyleClass().add("coluna-cinza");
+        custoVerdadeiroCol.setPrefWidth(105);
+
+        TableColumn<ItemAnalise, LocalDate> dataCustoVerdadeiroCol = new TableColumn<>("DATA CUSTO");
+        dataCustoVerdadeiroCol.setCellValueFactory(data -> data.getValue().dataCustoVerdadeiroProperty());
+        dataCustoVerdadeiroCol.setCellFactory(col -> new DataTableCell());
+        dataCustoVerdadeiroCol.getStyleClass().add("coluna-cinza");
+        dataCustoVerdadeiroCol.setPrefWidth(110);
 
         TableColumn<ItemAnalise, BigDecimal> margemPromobCol = new TableColumn<>("MARGEM PROMOB");
         margemPromobCol.setCellValueFactory(data -> data.getValue().margemPromobProperty());
@@ -1195,6 +1529,14 @@ public class telaInicial extends Application {
                 dataCustoCol
         );
         baseAtualGrupo.getStyleClass().add("grupo-vermelho");
+        
+        custoVerdadeiroGrupoCol = new TableColumn<>("CUSTO VERDADEIRO");
+        custoVerdadeiroGrupoCol.getColumns().addAll(
+                margemVerdadeiraCol,
+                custoVerdadeiroCol,
+                dataCustoVerdadeiroCol
+        );
+        custoVerdadeiroGrupoCol.getStyleClass().add("grupo-cinza");
 
         TableColumn<ItemAnalise, String> basePromobGrupo = new TableColumn<>("BASE PROMOB");
         basePromobGrupo.getColumns().addAll(
@@ -1230,6 +1572,11 @@ public class telaInicial extends Application {
                 margemPromobCol,
                 custoPromobCol,
                 dataCustoPromobCol,
+                
+                custoVerdadeiroGrupoCol,
+                margemVerdadeiraCol,
+                custoVerdadeiroCol,
+                dataCustoVerdadeiroCol,
 
                 analiseAnteriorGrupo,
                 variacaoAnteriorCol,
@@ -1239,16 +1586,17 @@ public class telaInicial extends Application {
         );
 
         tabela.getColumns().addAll(
-        		codigoCol,
-        		descricaoCol,
-        		quantidadeCol,
-        		valorUnitarioCol,
-        		valorTotalCol,
-        		okEncalhadoCol,
-        		baseAtualGrupo,
-        		basePromobGrupo,
-        		analiseAnteriorGrupo
-        		);
+                codigoCol,
+                descricaoCol,
+                quantidadeCol,
+                valorUnitarioCol,
+                valorTotalCol,
+                okEncalhadoCol,
+                baseAtualGrupo,
+                custoVerdadeiroGrupoCol,
+                basePromobGrupo,
+                analiseAnteriorGrupo
+        );
         
         registrarOrdemPadraoColunasTabela(
                 codigoCol,
@@ -1258,12 +1606,15 @@ public class telaInicial extends Application {
                 valorTotalCol,
                 okEncalhadoCol,
                 baseAtualGrupo,
+                custoVerdadeiroGrupoCol,
                 basePromobGrupo,
                 analiseAnteriorGrupo
         );
         
         aplicarLayoutPersistidoTabela();
         registrarListenersPersistenciaLayoutTabela();
+        
+        atualizarVisibilidadeColunaCustoVerdadeiro();
 
         tabela.setRowFactory(tv -> {
         	TableRow<ItemAnalise> row = new TableRow<>() {
@@ -1352,6 +1703,52 @@ public class telaInicial extends Application {
         return tabela;
     }
 
+    private void posicionarColunaDepoisDe(
+            ObservableList<TableColumn<ItemAnalise, ?>> colunas,
+            String idColunaMover,
+            String idColunaReferencia
+    ) {
+        if (colunas == null || idColunaMover == null || idColunaReferencia == null) {
+            return;
+        }
+
+        TableColumn<ItemAnalise, ?> colunaMover = null;
+        TableColumn<ItemAnalise, ?> colunaReferencia = null;
+
+        for (TableColumn<ItemAnalise, ?> coluna : colunas) {
+            String id = obterIdColunaTabela(coluna);
+
+            if (idColunaMover.equals(id)) {
+                colunaMover = coluna;
+            }
+
+            if (idColunaReferencia.equals(id)) {
+                colunaReferencia = coluna;
+            }
+        }
+
+        if (colunaMover == null || colunaReferencia == null || colunaMover == colunaReferencia) {
+            return;
+        }
+
+        colunas.remove(colunaMover);
+
+        int indiceReferencia = colunas.indexOf(colunaReferencia);
+
+        if (indiceReferencia < 0) {
+            colunas.add(colunaMover);
+            return;
+        }
+
+        int indiceDestino = indiceReferencia + 1;
+
+        if (indiceDestino >= colunas.size()) {
+            colunas.add(colunaMover);
+        } else {
+            colunas.add(indiceDestino, colunaMover);
+        }
+    }
+    
     private boolean colunaRecebeCorCondicao(TableColumn<?, ?> coluna) {
         if (coluna == null) {
             return false;
@@ -1425,6 +1822,11 @@ public class telaInicial extends Application {
             TableColumn<ItemAnalise, ?> margemAtualCol,
             TableColumn<ItemAnalise, ?> custoAtualCol,
             TableColumn<ItemAnalise, ?> dataCustoCol,
+            
+            TableColumn<ItemAnalise, ?> custoVerdadeiroGrupoCol,
+            TableColumn<ItemAnalise, ?> margemVerdadeiraCol,
+            TableColumn<ItemAnalise, ?> custoVerdadeiroCol,
+            TableColumn<ItemAnalise, ?> dataCustoVerdadeiroCol,
 
             TableColumn<ItemAnalise, ?> basePromobGrupo,
             TableColumn<ItemAnalise, ?> margemPromobCol,
@@ -1449,6 +1851,11 @@ public class telaInicial extends Application {
         margemAtualCol.setId("base_atual_margem");
         custoAtualCol.setId("base_atual_custo");
         dataCustoCol.setId("base_atual_data_custo");
+        
+        custoVerdadeiroGrupoCol.setId("custo_verdadeiro");
+        margemVerdadeiraCol.setId("custo_verdadeiro_margem");
+        custoVerdadeiroCol.setId("custo_verdadeiro_custo");
+        dataCustoVerdadeiroCol.setId("custo_verdadeiro_data_custo");
 
         basePromobGrupo.setId("base_promob");
         margemPromobCol.setId("base_promob_margem");
@@ -1469,6 +1876,17 @@ public class telaInicial extends Application {
                 && !isLinhaRodapeTabela(item)
                 && item.isItemEncalhado()
                 && !item.isItemEncalhadoConfirmado();
+    }
+    
+    private void atualizarVisibilidadeColunaCustoVerdadeiro() {
+        if (custoVerdadeiroGrupoCol == null) {
+            return;
+        }
+
+        boolean deveMostrar = configuracaoUsuario == null
+                || configuracaoUsuario.isCustoVerdadeiroAtivo();
+
+        custoVerdadeiroGrupoCol.setVisible(deveMostrar);
     }
 
     private void atualizarVisibilidadeColunaOkEncalhado() {
@@ -1513,6 +1931,10 @@ public class telaInicial extends Application {
 
         try {
             aplicarOrdemLayoutNasColunas(tabela.getColumns(), null, layout);
+
+            posicionarColunaDepoisDe(tabela.getColumns(), "ok_encalhado", "valor_total");
+            posicionarColunaDepoisDe(tabela.getColumns(), "custo_verdadeiro", "base_atual");
+
             aplicarLargurasLayoutNasColunas(tabela.getColumns(), layout);
         } finally {
             aplicandoLayoutTabela = false;
@@ -1768,6 +2190,8 @@ public class telaInicial extends Application {
         }
 
         tabela.getColumns().setAll(ordemPadraoColunasTabela);
+        posicionarColunaDepoisDe(tabela.getColumns(), "ok_encalhado", "valor_total");
+        posicionarColunaDepoisDe(tabela.getColumns(), "custo_verdadeiro", "base_atual");
         tabela.refresh();
 
         solicitarSalvarLayoutTabela();
@@ -1889,8 +2313,10 @@ public class telaInicial extends Application {
         telaConfiguracoes.exibir(getJanelaAtual());
 
         configuracaoUsuario = configuracaoUsuarioService.carregar();
-        
+
         atualizarVisibilidadeColunaOkEncalhado();
+        atualizarVisibilidadeColunaCustoVerdadeiro();
+        aplicarZoomInterface();
 
         if (tabela != null) {
             tabela.refresh();
@@ -3076,27 +3502,28 @@ public class telaInicial extends Application {
         });
     }
     
-        private double calcularAlturaTabela(BorderPane root, VBox topo, HBox rodape, HBox barraAcoesTabela) {
-            int quantidadeLinhas = Math.max(itens.size(), 1);
+    private double calcularAlturaTabela(BorderPane root, VBox topo, HBox rodape, HBox barraAcoesTabela) {
+        int quantidadeLinhas = Math.max(itens.size(), 1);
 
-            double alturaDesejada = ALTURA_CABECALHO_TABELA
-                    + quantidadeLinhas * ALTURA_LINHA_TABELA
-                    + ALTURA_BARRA_HORIZONTAL;
+        double alturaDesejada = ALTURA_CABECALHO_TABELA
+                + quantidadeLinhas * ALTURA_LINHA_TABELA
+                + ALTURA_BARRA_HORIZONTAL
+                + FOLGA_INTERNA_TABELA;
 
-            double alturaBarraAcoes = barraAcoesTabela == null ? 0 : barraAcoesTabela.getHeight();
+        double alturaBarraAcoes = barraAcoesTabela == null ? 0 : barraAcoesTabela.getHeight();
 
-            double alturaDisponivel = root.getHeight()
-                    - topo.getHeight()
-                    - rodape.getHeight()
-                    - alturaBarraAcoes
-                    - MARGEM_SEGURANCA_TABELA;
+        double alturaDisponivel = root.getHeight()
+                - topo.getHeight()
+                - rodape.getHeight()
+                - alturaBarraAcoes
+                - MARGEM_SEGURANCA_TABELA;
 
-            if (alturaDisponivel <= 0) {
-                return alturaDesejada;
-            }
-
-            return Math.min(alturaDesejada, alturaDisponivel);
+        if (alturaDisponivel <= 0) {
+            return alturaDesejada;
         }
+
+        return Math.min(alturaDesejada, alturaDisponivel);
+    }
     
     private class BigDecimalTableCell extends TableCell<ItemAnalise, BigDecimal> {
         private final boolean moeda;

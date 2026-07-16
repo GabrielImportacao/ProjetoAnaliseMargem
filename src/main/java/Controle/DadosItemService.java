@@ -3,6 +3,8 @@ package Controle;
 import Modelo.*;
 import Repositorio.*;
 
+import Configuracao.ConfiguracaoUsuarioService;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -13,7 +15,13 @@ public class DadosItemService {
     private final CustoRepository custoRepository;
     private final CustoPromobRepository custoPromobRepository;
     private final ItemNfsRepository itemNfsRepository;
+    private final CustoVerdadeiroService custoVerdadeiroService;
+    private final ConfiguracaoUsuarioService configuracaoUsuarioService = new ConfiguracaoUsuarioService();
     
+    
+    private boolean custoVerdadeiroAtivo() {
+        return configuracaoUsuarioService.carregar().isCustoVerdadeiroAtivo();
+    }
     
     public void preCarregarBases() {
         if (itemRepository instanceof ItemRepositorySqlite repositorySqliteItens) {
@@ -34,6 +42,9 @@ public class DadosItemService {
         
         if (itemNfsRepository instanceof ItemNfsRepositorySqlite repositoryItemNfsSqlite) {
             repositoryItemNfsSqlite.preCarregarCache();
+        }
+        if (custoVerdadeiroAtivo()) {
+            custoVerdadeiroService.preCarregarCache();
         }
     }
 
@@ -57,6 +68,10 @@ public class DadosItemService {
         if (itemNfsRepository instanceof ItemNfsRepositorySqlite repositoryItemNfsSqlite) {
             repositoryItemNfsSqlite.limparCache();
         }
+        
+        if (custoVerdadeiroAtivo()) {
+            custoVerdadeiroService.limparCache();
+        }
 
         preCarregarBases();
     }
@@ -66,6 +81,7 @@ public class DadosItemService {
         this.custoRepository = new CustoRepositorySqlite();
         this.custoPromobRepository = new CustoPromobRepositorySqlite();
         this.itemNfsRepository = new ItemNfsRepositorySqlite();
+        this.custoVerdadeiroService = new CustoVerdadeiroService();
     }
 
     public DadosItemService(
@@ -91,6 +107,7 @@ public class DadosItemService {
         this.custoRepository = custoRepository;
         this.custoPromobRepository = custoPromobRepository;
         this.itemNfsRepository = itemNfsRepository;
+        this.custoVerdadeiroService = new CustoVerdadeiroService();
     }
     
     public Optional<BigDecimal> buscarPrecoPadraoVendaPorCodigo(String codigoItem) {
@@ -163,6 +180,7 @@ public class DadosItemService {
         boolean itemEncalhado = calcularItemEncalhado(ultimaSaidaEncontrada);
 
         CustoResolvido custoAtual = resolverCustoAtual(item, historicoCusto, itemImportado);
+        CustoResolvido custoVerdadeiro = resolverCustoVerdadeiro(codigoItem);
         CustoResolvido custoAnterior = resolverCustoAnterior(historicoCusto, itemImportado);
         CustoResolvido custoPromob = resolverCustoPromob(custoPromobEncontrado);
 
@@ -180,6 +198,11 @@ public class DadosItemService {
                 custoAtual.registro(),
                 custoAtual.data(),
                 custoAtual.fonte(),
+                
+                custoVerdadeiro.custo(),
+                custoVerdadeiro.registro(),
+                custoVerdadeiro.data(),
+                custoVerdadeiro.fonte(),
 
                 custoPromob.custo(),
                 custoPromob.registro(),
@@ -196,6 +219,38 @@ public class DadosItemService {
         );
 
         return Optional.of(dados);
+    }
+    
+    private CustoResolvido resolverCustoVerdadeiro(String codigoItem) {
+        if (!custoVerdadeiroAtivo()) {
+            return new CustoResolvido(
+                    null,
+                    "",
+                    null,
+                    FonteCusto.NAO_ENCONTRADO
+            );
+        }
+
+        Optional<CustoVerdadeiroItem> custoVerdadeiroEncontrado =
+                custoVerdadeiroService.buscarPorItem(codigoItem);
+    	
+        if (custoVerdadeiroEncontrado.isEmpty()) {
+            return new CustoResolvido(
+                    null,
+                    "",
+                    null,
+                    FonteCusto.NAO_ENCONTRADO
+            );
+        }
+
+        CustoVerdadeiroItem custoVerdadeiro = custoVerdadeiroEncontrado.get();
+
+        return new CustoResolvido(
+                custoVerdadeiro.getCusto(),
+                "LOTES: " + custoVerdadeiro.getQuantidadeLotesUsados(),
+                custoVerdadeiro.getDataReferencia(),
+                FonteCusto.CUSTO_VERDADEIRO
+        );
     }
 
     private CustoResolvido resolverCustoAtual(

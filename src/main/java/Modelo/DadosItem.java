@@ -8,14 +8,17 @@ public class DadosItem {
     private final String descricao;
 
     private final BigDecimal custoAtual;
+    private final BigDecimal custoVerdadeiro;
     private final BigDecimal custoPromob;
     private final BigDecimal custoAnterior;
 
     private final String registroCustoAtual;
+    private final String registroCustoVerdadeiro;
     private final String registroCustoPromob;
     private final String registroCustoAnterior;
 
     private final LocalDate dataCustoAtual;
+    private final LocalDate dataCustoVerdadeiro;
     private final LocalDate dataCustoPromob;
     private final LocalDate dataCustoAnterior;
     
@@ -27,12 +30,15 @@ public class DadosItem {
     public DadosItem(String codigo,
                      String descricao,
                      BigDecimal custoAtual,
+                     BigDecimal custoVerdadeiro,
                      BigDecimal custoPromob,
                      BigDecimal custoAnterior,
                      String registroCustoAtual,
+                     String registroCustoVerdadeiro,
                      String registroCustoPromob,
                      String registroCustoAnterior,
                      LocalDate dataCustoAtual,
+                     LocalDate dataCustoVerdadeiro,
                      LocalDate dataCustoPromob,
                      LocalDate dataCustoAnterior,
     				 BigDecimal precoPadraoVenda,
@@ -54,6 +60,21 @@ public class DadosItem {
         this.ipi = ipi;
         this.dataUltimaSaida = dataUltimaSaida;
         this.itemEncalhado = itemEncalhado;
+        this.custoVerdadeiro = custoVerdadeiro;
+        this.registroCustoVerdadeiro = registroCustoVerdadeiro;
+        this.dataCustoVerdadeiro = dataCustoVerdadeiro;
+    }
+    
+    public BigDecimal getCustoVerdadeiro() {
+        return custoVerdadeiro;
+    }
+
+    public String getRegistroCustoVerdadeiro() {
+        return registroCustoVerdadeiro;
+    }
+
+    public LocalDate getDataCustoVerdadeiro() {
+        return dataCustoVerdadeiro;
     }
 
     public LocalDate getDataUltimaSaida() {

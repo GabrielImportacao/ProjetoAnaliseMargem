@@ -58,6 +58,58 @@ public class ItemAnalise {
     
     private final BooleanProperty itemEncalhadoConfirmado = new SimpleBooleanProperty(false);
     
+    private final ObjectProperty<BigDecimal> margemVerdadeira = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    private final StringProperty registroCustoVerdadeiro = new SimpleStringProperty("");
+    private final ObjectProperty<LocalDate> dataCustoVerdadeiro = new SimpleObjectProperty<>();
+    private final ObjectProperty<BigDecimal> custoVerdadeiro = new SimpleObjectProperty<>(BigDecimal.ZERO);
+    
+    public BigDecimal getMargemVerdadeira() {
+        return margemVerdadeira.get();
+    }
+
+    public void setMargemVerdadeira(BigDecimal margemVerdadeira) {
+        this.margemVerdadeira.set(margemVerdadeira == null ? BigDecimal.ZERO : margemVerdadeira);
+    }
+
+    public ObjectProperty<BigDecimal> margemVerdadeiraProperty() {
+        return margemVerdadeira;
+    }
+
+    public String getRegistroCustoVerdadeiro() {
+        return registroCustoVerdadeiro.get();
+    }
+
+    public void setRegistroCustoVerdadeiro(String registroCustoVerdadeiro) {
+        this.registroCustoVerdadeiro.set(registroCustoVerdadeiro == null ? "" : registroCustoVerdadeiro);
+    }
+
+    public StringProperty registroCustoVerdadeiroProperty() {
+        return registroCustoVerdadeiro;
+    }
+
+    public LocalDate getDataCustoVerdadeiro() {
+        return dataCustoVerdadeiro.get();
+    }
+
+    public void setDataCustoVerdadeiro(LocalDate dataCustoVerdadeiro) {
+        this.dataCustoVerdadeiro.set(dataCustoVerdadeiro);
+    }
+
+    public ObjectProperty<LocalDate> dataCustoVerdadeiroProperty() {
+        return dataCustoVerdadeiro;
+    }
+
+    public BigDecimal getCustoVerdadeiro() {
+        return custoVerdadeiro.get();
+    }
+
+    public void setCustoVerdadeiro(BigDecimal custoVerdadeiro) {
+        this.custoVerdadeiro.set(custoVerdadeiro == null ? BigDecimal.ZERO : custoVerdadeiro);
+    }
+
+    public ObjectProperty<BigDecimal> custoVerdadeiroProperty() {
+        return custoVerdadeiro;
+    }    
     
     public boolean isItemEncalhadoConfirmado() {
         return itemEncalhadoConfirmado.get();
@@ -426,14 +478,17 @@ public class ItemAnalise {
             setDescricao("ITEM NÃO ENCONTRADO");
 
             setCustoAtual(BigDecimal.ZERO);
+            setCustoVerdadeiro(BigDecimal.ZERO);
             setCustoPromob(BigDecimal.ZERO);
             setCustoAnterior(BigDecimal.ZERO);
 
             setRegistroCustoAtual("");
+            setRegistroCustoVerdadeiro("");
             setRegistroCustoPromob("");
             setRegistroCustoAnterior("");
 
             setDataCustoAtual(null);
+            setDataCustoVerdadeiro(null);
             setDataCustoPromob(null);
             setDataCustoAnterior(null);
 
@@ -450,6 +505,8 @@ public class ItemAnalise {
             setDataUltimaSaida(null);
             setItemEncalhado(false);
             setItemEncalhadoConfirmado(false);
+            
+            setMargemVerdadeira(BigDecimal.ZERO);
 
             return;
         }
@@ -457,14 +514,17 @@ public class ItemAnalise {
         setDescricao(dados.getDescricao());
 
         setCustoAtual(dados.getCustoAtual());
+        setCustoVerdadeiro(dados.getCustoVerdadeiro());
         setCustoPromob(dados.getCustoPromob());
         setCustoAnterior(dados.getCustoAnterior());
 
         setRegistroCustoAtual(dados.getRegistroCustoAtual());
+        setRegistroCustoVerdadeiro(dados.getRegistroCustoVerdadeiro());
         setRegistroCustoPromob(dados.getRegistroCustoPromob());
         setRegistroCustoAnterior(dados.getRegistroCustoAnterior());
 
         setDataCustoAtual(dados.getDataCustoAtual());
+        setDataCustoVerdadeiro(dados.getDataCustoVerdadeiro());
         setDataCustoPromob(dados.getDataCustoPromob());
         setDataCustoAnterior(dados.getDataCustoAnterior());
 

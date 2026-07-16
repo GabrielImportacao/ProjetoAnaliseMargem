@@ -86,6 +86,10 @@ public class EstadoTabelaRepositorySqlite implements EstadoTabelaRepository {
                         custo_atual,
                         registro_custo_atual,
                         data_custo_atual,
+                        margem_verdadeira,
+						custo_verdadeiro,
+						registro_custo_verdadeiro,
+						data_custo_verdadeiro,
                         margem_promob,
                         custo_promob,
                         registro_custo_promob,
@@ -101,7 +105,7 @@ public class EstadoTabelaRepositorySqlite implements EstadoTabelaRepository {
             			item_encalhado,
             			item_encalhado_confirmado
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """;
 
             try (PreparedStatement insert = conexao.prepareStatement(sqlInsert)) {
@@ -128,25 +132,34 @@ public class EstadoTabelaRepositorySqlite implements EstadoTabelaRepository {
                     insert.setString(13, decimalTexto(linha.getCustoAtual()));
                     insert.setString(14, texto(linha.getRegistroCustoAtual()));
                     insert.setString(15, dataTexto(linha.getDataCustoAtual()));
+                    
+                    insert.setString(16, decimalTexto(linha.getMargemVerdadeira()));
+                    insert.setString(17, decimalTexto(linha.getCustoVerdadeiro()));
+                    insert.setString(18, texto(linha.getRegistroCustoVerdadeiro()));
+                    insert.setString(19, dataTexto(linha.getDataCustoVerdadeiro()));
 
                     insert.setString(16, decimalTexto(linha.getMargemPromob()));
                     insert.setString(17, decimalTexto(linha.getCustoPromob()));
                     insert.setString(18, texto(linha.getRegistroCustoPromob()));
                     insert.setString(19, dataTexto(linha.getDataCustoPromob()));
 
-                    insert.setString(20, decimalTexto(linha.getVariacaoAnterior()));
-                    insert.setString(21, decimalTexto(linha.getMargemAnterior()));
-                    insert.setString(22, decimalTexto(linha.getCustoAnterior()));
-                    insert.setString(23, texto(linha.getRegistroCustoAnterior()));
-                    insert.setString(24, dataTexto(linha.getDataCustoAnterior()));
+                    insert.setString(20, decimalTexto(linha.getMargemPromob()));
+                    insert.setString(21, decimalTexto(linha.getCustoPromob()));
+                    insert.setString(22, texto(linha.getRegistroCustoPromob()));
+                    insert.setString(23, dataTexto(linha.getDataCustoPromob()));
 
-                    insert.setString(25, decimalTexto(linha.getPrecoPadraoVenda()));
-                    insert.setString(26, decimalTexto(linha.getPercentualIpi()));
-                    
-                    insert.setString(27, dataTexto(linha.getDataUltimaSaida()));
-                    insert.setInt(28, linha.isItemEncalhado() ? 1 : 0);
-                    
-                    insert.setInt(29, linha.isItemEncalhadoConfirmado() ? 1 : 0);
+                    insert.setString(24, decimalTexto(linha.getVariacaoAnterior()));
+                    insert.setString(25, decimalTexto(linha.getMargemAnterior()));
+                    insert.setString(26, decimalTexto(linha.getCustoAnterior()));
+                    insert.setString(27, texto(linha.getRegistroCustoAnterior()));
+                    insert.setString(28, dataTexto(linha.getDataCustoAnterior()));
+
+                    insert.setString(29, decimalTexto(linha.getPrecoPadraoVenda()));
+                    insert.setString(30, decimalTexto(linha.getPercentualIpi()));
+
+                    insert.setString(31, dataTexto(linha.getDataUltimaSaida()));
+                    insert.setInt(32, linha.isItemEncalhado() ? 1 : 0);
+                    insert.setInt(33, linha.isItemEncalhadoConfirmado() ? 1 : 0);
 
                     insert.addBatch();
                 }
@@ -190,6 +203,10 @@ public class EstadoTabelaRepositorySqlite implements EstadoTabelaRepository {
                     custo_atual TEXT,
                     registro_custo_atual TEXT,
                     data_custo_atual TEXT,
+                    margem_verdadeira TEXT,
+					custo_verdadeiro TEXT,
+					registro_custo_verdadeiro TEXT,
+					data_custo_verdadeiro TEXT,
                     margem_promob TEXT,
                     custo_promob TEXT,
                     registro_custo_promob TEXT,
@@ -230,6 +247,10 @@ public class EstadoTabelaRepositorySqlite implements EstadoTabelaRepository {
                 decimal(resultSet.getString("custo_atual")),
                 resultSet.getString("registro_custo_atual"),
                 data(resultSet.getString("data_custo_atual")),
+                decimal(resultSet.getString("margem_verdadeira")),
+                decimal(resultSet.getString("custo_verdadeiro")),
+                resultSet.getString("registro_custo_verdadeiro"),
+                data(resultSet.getString("data_custo_verdadeiro")),
                 decimal(resultSet.getString("margem_promob")),
                 decimal(resultSet.getString("custo_promob")),
                 resultSet.getString("registro_custo_promob"),
@@ -251,6 +272,10 @@ public class EstadoTabelaRepositorySqlite implements EstadoTabelaRepository {
         adicionarColunaSeNaoExistir(conexao, "estado_linha_tabela", "data_ultima_saida", "TEXT");
         adicionarColunaSeNaoExistir(conexao, "estado_linha_tabela", "item_encalhado", "INTEGER");
         adicionarColunaSeNaoExistir(conexao, "estado_linha_tabela", "item_encalhado_confirmado", "INTEGER");
+        adicionarColunaSeNaoExistir(conexao, "estado_linha_tabela", "margem_verdadeira", "TEXT");
+        adicionarColunaSeNaoExistir(conexao, "estado_linha_tabela", "custo_verdadeiro", "TEXT");
+        adicionarColunaSeNaoExistir(conexao, "estado_linha_tabela", "registro_custo_verdadeiro", "TEXT");
+        adicionarColunaSeNaoExistir(conexao, "estado_linha_tabela", "data_custo_verdadeiro", "TEXT");
     }
 
     private void adicionarColunaSeNaoExistir(

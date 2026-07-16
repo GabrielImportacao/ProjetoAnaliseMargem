@@ -8,9 +8,11 @@ import java.util.List;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
@@ -56,6 +58,7 @@ public class TelaConfiguracoes {
     private AbaConfiguracao abaSelecionada = AbaConfiguracao.TABELA;
 
     private Label abaTabelaLabel;
+    private Label abaAparenciaLabel;
     private Label abaEstadosLabel;
     private Label abaUsuarioLabel;
     
@@ -194,12 +197,14 @@ public class TelaConfiguracoes {
         Label tituloAbas = criarTituloMenu("Abas");
 
         abaTabelaLabel = criarBotaoAba("Tabela", AbaConfiguracao.TABELA);
+        abaAparenciaLabel = criarBotaoAba("Aparência", AbaConfiguracao.APARENCIA);
         abaEstadosLabel = criarBotaoAba("Estados", AbaConfiguracao.ESTADOS);
         abaUsuarioLabel = criarBotaoAba("Usuário", AbaConfiguracao.USUARIO);
 
         menuAbas.getChildren().addAll(
                 tituloAbas,
                 abaTabelaLabel,
+                abaAparenciaLabel,
                 abaEstadosLabel,
                 abaUsuarioLabel,
                 criarEspacoFinalMenu()
@@ -269,16 +274,18 @@ public class TelaConfiguracoes {
         areaConteudo.getChildren().clear();
 
         switch (abaSelecionada) {
-            case TABELA -> areaConteudo.getChildren().add(criarConteudoTabela());
-            case ESTADOS -> areaConteudo.getChildren().add(criarConteudoEstados());
-            case USUARIO -> areaConteudo.getChildren().add(criarConteudoUsuario());
-        }
+        case TABELA -> areaConteudo.getChildren().add(criarConteudoTabela());
+        case APARENCIA -> areaConteudo.getChildren().add(criarConteudoAparencia());
+        case ESTADOS -> areaConteudo.getChildren().add(criarConteudoEstados());
+        case USUARIO -> areaConteudo.getChildren().add(criarConteudoUsuario());
+    }
     }
 
     private void atualizarVisualAbas() {
-        estilizarAba(abaTabelaLabel, abaSelecionada == AbaConfiguracao.TABELA);
-        estilizarAba(abaEstadosLabel, abaSelecionada == AbaConfiguracao.ESTADOS);
-        estilizarAba(abaUsuarioLabel, abaSelecionada == AbaConfiguracao.USUARIO);
+    	estilizarAba(abaTabelaLabel, abaSelecionada == AbaConfiguracao.TABELA);
+    	estilizarAba(abaAparenciaLabel, abaSelecionada == AbaConfiguracao.APARENCIA);
+    	estilizarAba(abaEstadosLabel, abaSelecionada == AbaConfiguracao.ESTADOS);
+    	estilizarAba(abaUsuarioLabel, abaSelecionada == AbaConfiguracao.USUARIO);
     }
 
     private void estilizarAba(Label label, boolean selecionada) {
@@ -317,13 +324,13 @@ public class TelaConfiguracoes {
 
         Label titulo = criarTituloConteudo("Configurações");
 
-        VBox opcoes = new VBox(24);
-        opcoes.setPadding(new Insets(20, 0, 0, 0));
+        VBox opcoes = new VBox(18);
+        opcoes.setPadding(new Insets(22, 0, 0, 0));
 
-        CheckBoxVisual margemPorcentagem = new CheckBoxVisual(
-                "Margem em Porcentagem",
-                configuracaoEdicao.isMargemEmPorcentagem(),
-                marcado -> configuracaoEdicao.setMargemEmPorcentagem(marcado)
+        CheckBoxVisual custoVerdadeiro = new CheckBoxVisual(
+                "Custo Verdadeiro",
+                configuracaoEdicao.isCustoVerdadeiroAtivo(),
+                marcado -> configuracaoEdicao.setCustoVerdadeiroAtivo(marcado)
         );
 
         CheckBoxVisual custoFuturo = new CheckBoxVisual(
@@ -344,16 +351,162 @@ public class TelaConfiguracoes {
                 marcado -> configuracaoEdicao.setFlagItensEncalhados(marcado)
         );
 
-        opcoes.getChildren().addAll(
-                margemPorcentagem,
-                custoFuturo,
-                custoEstimado,
-                flagEncalhados
+        CheckBoxVisual margemPorcentagem = new CheckBoxVisual(
+                "Margem em Porcentagem",
+                configuracaoEdicao.isMargemEmPorcentagem(),
+                marcado -> configuracaoEdicao.setMargemEmPorcentagem(marcado)
         );
 
-        box.getChildren().addAll(titulo, opcoes);
+        opcoes.getChildren().addAll(
+                custoVerdadeiro,
+                custoFuturo,
+                custoEstimado,
+                flagEncalhados,
+                margemPorcentagem
+        );
+
+        ScrollPane scroll = new ScrollPane(opcoes);
+        scroll.getStyleClass().add("scroll-config-estados");
+        scroll.setFitToWidth(true);
+        scroll.setMaxWidth(Double.MAX_VALUE);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setPannable(true);
+        scroll.setStyle(
+                "-fx-background: " + COR_FUNDO + ";" +
+                "-fx-background-color: " + COR_FUNDO + ";" +
+                "-fx-border-color: transparent;"
+        );
+
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        box.getChildren().addAll(titulo, scroll);
 
         return box;
+    }
+    
+    private VBox criarConteudoAparencia() {
+        VBox box = criarConteudoBase();
+
+        Label titulo = criarTituloConteudo("Configurações");
+
+        HBox linhaZoom = new HBox(8);
+        linhaZoom.setAlignment(Pos.CENTER_LEFT);
+        linhaZoom.setPadding(new Insets(26, 0, 0, 0));
+
+        Label zoomLabel = new Label("Zoom:");
+        zoomLabel.setStyle(
+                "-fx-font-size: 21px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-text-fill: " + COR_TEXTO + ";"
+        );
+
+        HBox controleZoom = new HBox(0);
+        controleZoom.setAlignment(Pos.CENTER_LEFT);
+        controleZoom.setPadding(new Insets(0, 4, 0, 4));
+        controleZoom.setMinHeight(28);
+        controleZoom.setPrefHeight(28);
+        controleZoom.setMaxHeight(28);
+        controleZoom.setMinWidth(112);
+        controleZoom.setPrefWidth(112);
+        controleZoom.setMaxWidth(112);
+        controleZoom.setStyle(
+                "-fx-background-color: " + COR_FUNDO + ";" +
+                "-fx-border-color: " + COR_BORDA + ";" +
+                "-fx-border-width: 2;"
+        );
+
+        StackPane lupaBox = criarCelulaControleZoom(carregarIcone("lupa.png", 16, 16), 22);
+
+        Label diminuir = criarTextoControleZoom("-");
+        Label valorZoom = criarValorZoom(configuracaoEdicao.getZoomInterface() + "%");
+        Label aumentar = criarTextoControleZoom("+");
+
+        diminuir.setOnMouseClicked(event -> {
+            int novoZoom = Math.max(50, configuracaoEdicao.getZoomInterface() - 5);
+            configuracaoEdicao.setZoomInterface(novoZoom);
+            valorZoom.setText(novoZoom + "%");
+        });
+
+        aumentar.setOnMouseClicked(event -> {
+            int novoZoom = Math.min(200, configuracaoEdicao.getZoomInterface() + 5);
+            configuracaoEdicao.setZoomInterface(novoZoom);
+            valorZoom.setText(novoZoom + "%");
+        });
+
+        controleZoom.getChildren().addAll(
+                lupaBox,
+                diminuir,
+                valorZoom,
+                aumentar
+        );
+
+        linhaZoom.getChildren().addAll(zoomLabel, controleZoom);
+
+        box.getChildren().addAll(titulo, linhaZoom);
+
+        return box;
+    }
+    
+    private StackPane criarCelulaControleZoom(Node conteudo, double largura) {
+        StackPane celula = new StackPane(conteudo);
+        celula.setAlignment(Pos.CENTER);
+        celula.setMinWidth(largura);
+        celula.setPrefWidth(largura);
+        celula.setMaxWidth(largura);
+        celula.setMinHeight(24);
+        celula.setPrefHeight(24);
+        celula.setMaxHeight(24);
+
+        return celula;
+    }
+    
+    private Label criarTextoControleZoom(String texto) {
+        Label label = new Label(texto);
+        label.setAlignment(Pos.CENTER);
+        label.setCursor(Cursor.HAND);
+        label.setMinWidth(14);
+        label.setPrefWidth(14);
+        label.setMaxWidth(14);
+        label.setMinHeight(24);
+        label.setPrefHeight(24);
+        label.setMaxHeight(24);
+        label.setStyle(
+                "-fx-font-size: 18px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-text-fill: " + COR_TEXTO + ";" +
+                "-fx-padding: -1 0 0 0;"
+        );
+
+        label.setOnMouseEntered(event -> label.setOpacity(0.75));
+        label.setOnMouseExited(event -> {
+            label.setOpacity(1.0);
+            label.setTranslateY(0);
+        });
+        label.setOnMousePressed(event -> label.setTranslateY(1));
+        label.setOnMouseReleased(event -> label.setTranslateY(0));
+
+        return label;
+    }
+    
+    private Label criarValorZoom(String texto) {
+        Label label = new Label(texto);
+        label.setAlignment(Pos.CENTER);
+        label.setMinWidth(48);
+        label.setPrefWidth(48);
+        label.setMaxWidth(48);
+        label.setMinHeight(24);
+        label.setPrefHeight(24);
+        label.setMaxHeight(24);
+        label.setTextOverrun(OverrunStyle.CLIP);
+        label.setStyle(
+                "-fx-font-size: 18px;" +
+                "-fx-font-weight: normal;" +
+                "-fx-text-fill: " + COR_TEXTO + ";" +
+                "-fx-padding: -1 0 0 0;"
+        );
+
+        return label;
     }
 
     private VBox criarConteudoEstados() {
@@ -575,7 +728,8 @@ public class TelaConfiguracoes {
     }
 
     private enum AbaConfiguracao {
-        TABELA,
+    	TABELA,
+        APARENCIA,
         ESTADOS,
         USUARIO
     }

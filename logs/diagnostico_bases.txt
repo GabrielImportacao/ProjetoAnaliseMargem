@@ -1,5 +1,5 @@
 ===== DIAGNOSTICO DE BASES =====
-Data/Hora: 2026-07-02T11:11:57.830751700
+Data/Hora: 2026-07-14T08:42:53.702563600
 user.dir: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
 user.home: C:\Users\import3
 java.version: 25.0.2
@@ -19,8 +19,8 @@ EXISTE: true
 É PASTA: false
 PODE LER: true
 PODE ESCREVER: true
-TAMANHO BYTES: 2031616
-ÚLTIMA MODIFICAÇÃO: 2026-06-29T17:40:34.3953028Z
+TAMANHO BYTES: 2076672
+ÚLTIMA MODIFICAÇÃO: 2026-07-06T13:56:59.7523638Z
 
 --------------------------------------------------
 BASE: BD_METAL_ITEM_AT.xlsb
@@ -31,8 +31,8 @@ EXISTE: true
 É PASTA: false
 PODE LER: true
 PODE ESCREVER: true
-TAMANHO BYTES: 770535
-ÚLTIMA MODIFICAÇÃO: 2026-06-26T18:09:02.9673306Z
+TAMANHO BYTES: 774481
+ÚLTIMA MODIFICAÇÃO: 2026-07-06T18:20:08.8858675Z
 
 --------------------------------------------------
 BASE: movestq.db
@@ -44,5 +44,5 @@ EXISTE: true
 PODE LER: true
 PODE ESCREVER: true
 TAMANHO BYTES: 356352
-ÚLTIMA MODIFICAÇÃO: 2026-07-02T11:17:26.8903152Z
+ÚLTIMA MODIFICAÇÃO: 2026-07-13T11:11:51.0401093Z
 

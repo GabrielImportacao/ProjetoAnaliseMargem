@@ -1,0 +1,100 @@
+
+============================================================
+DATA/HORA: 13/07/2026 15:01:26
+CONTEXTO: Erro inesperado na thread: JavaFX Application Thread
+ORIGEM PROVAVEL: INTERNO
+MENSAGEM AO USUARIO: O programa encontrou um erro interno durante a execução.
+ORIENTACAO: Envie o arquivo de log para manutenção. Provavelmente será necessário ajustar o código.
+LOCAL TECNICO: jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:100)
+THREAD: JavaFX Application Thread
+JAVA: 25.0.2
+SISTEMA: Windows 11 10.0
+PASTA EXECUCAO: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
+
+ERRO:
+java.lang.IndexOutOfBoundsException: Index 7 out of bounds for length 7
+	at java.base/jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:100)
+	at java.base/jdk.internal.util.Preconditions.outOfBoundsCheckIndex(Preconditions.java:106)
+	at java.base/jdk.internal.util.Preconditions.checkIndex(Preconditions.java:302)
+	at java.base/java.util.Objects.checkIndex(Objects.java:365)
+	at java.base/java.util.ArrayList.get(ArrayList.java:428)
+	at javafx.base@21.0.4/com.sun.javafx.collections.ObservableListWrapper.get(ObservableListWrapper.java:88)
+	at javafx.base@21.0.4/com.sun.javafx.collections.VetoableListDecorator.get(VetoableListDecorator.java:314)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Scene.doCSSPass(Scene.java:587)
+	at javafx.graphics@21.0.4/javafx.scene.Scene$ScenePulseListener.pulse(Scene.java:2595)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.Toolkit.lambda$runPulse$2(Toolkit.java:401)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:138)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.Toolkit.runPulse(Toolkit.java:400)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.Toolkit.firePulse(Toolkit.java:430)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.quantum.QuantumToolkit.pulse(QuantumToolkit.java:592)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.quantum.QuantumToolkit.pulse(QuantumToolkit.java:572)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.quantum.QuantumToolkit.pulseFromQueue(QuantumToolkit.java:565)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.quantum.QuantumToolkit.lambda$runToolkit$11(QuantumToolkit.java:352)
+	at javafx.graphics@21.0.4/com.sun.glass.ui.InvokeLaterDispatcher$Future.run(InvokeLaterDispatcher.java:95)
+	at javafx.graphics@21.0.4/com.sun.glass.ui.win.WinApplication._runLoop(Native Method)
+	at javafx.graphics@21.0.4/com.sun.glass.ui.win.WinApplication.lambda$runLoop$3(WinApplication.java:185)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+============================================================
+
+============================================================
+DATA/HORA: 13/07/2026 15:02:21
+CONTEXTO: Erro inesperado na thread: JavaFX Application Thread
+ORIGEM PROVAVEL: INTERNO
+MENSAGEM AO USUARIO: O programa encontrou um erro interno durante a execução.
+ORIENTACAO: Envie o arquivo de log para manutenção. Provavelmente será necessário ajustar o código.
+LOCAL TECNICO: jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:100)
+THREAD: JavaFX Application Thread
+JAVA: 25.0.2
+SISTEMA: Windows 11 10.0
+PASTA EXECUCAO: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
+
+ERRO:
+java.lang.IndexOutOfBoundsException: Index 2 out of bounds for length 2
+	at java.base/jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:100)
+	at java.base/jdk.internal.util.Preconditions.outOfBoundsCheckIndex(Preconditions.java:106)
+	at java.base/jdk.internal.util.Preconditions.checkIndex(Preconditions.java:302)
+	at java.base/java.util.Objects.checkIndex(Objects.java:365)
+	at java.base/java.util.ArrayList.get(ArrayList.java:428)
+	at javafx.base@21.0.4/com.sun.javafx.collections.ObservableListWrapper.get(ObservableListWrapper.java:88)
+	at javafx.base@21.0.4/com.sun.javafx.collections.VetoableListDecorator.get(VetoableListDecorator.java:314)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Node.processCSS(Node.java:9548)
+	at javafx.graphics@21.0.4/javafx.scene.Scene.doCSSPass(Scene.java:587)
+	at javafx.graphics@21.0.4/javafx.scene.Scene$ScenePulseListener.pulse(Scene.java:2595)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.Toolkit.lambda$runPulse$2(Toolkit.java:401)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:138)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.Toolkit.runPulse(Toolkit.java:400)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.Toolkit.firePulse(Toolkit.java:430)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.quantum.QuantumToolkit.pulse(QuantumToolkit.java:592)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.quantum.QuantumToolkit.pulse(QuantumToolkit.java:572)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.quantum.QuantumToolkit.pulseFromQueue(QuantumToolkit.java:565)
+	at javafx.graphics@21.0.4/com.sun.javafx.tk.quantum.QuantumToolkit.lambda$runToolkit$11(QuantumToolkit.java:352)
+	at javafx.graphics@21.0.4/com.sun.glass.ui.InvokeLaterDispatcher$Future.run(InvokeLaterDispatcher.java:95)
+	at javafx.graphics@21.0.4/com.sun.glass.ui.win.WinApplication._runLoop(Native Method)
+	at javafx.graphics@21.0.4/com.sun.glass.ui.win.WinApplication.lambda$runLoop$3(WinApplication.java:185)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+============================================================

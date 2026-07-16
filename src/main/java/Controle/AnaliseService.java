@@ -57,6 +57,7 @@ public void recalcular(ItemAnalise item, BigDecimal percentualBaseEstado) {
     item.setVariacaoAnterior(calcularVariacao(valorUnitario, precoComparacaoParaVariacao));
 
     item.setMargemAtual(calcularMargem(item.getCustoAtual(), valorUnitario));
+    item.setMargemVerdadeira(calcularMargem(item.getCustoVerdadeiro(), valorUnitario));
     item.setMargemPromob(calcularMargem(item.getCustoPromob(), valorUnitario));
     item.setMargemAnterior(calcularMargem(item.getCustoAnterior(), valorUnitario));
 

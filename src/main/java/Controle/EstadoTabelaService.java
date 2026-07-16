@@ -71,6 +71,10 @@ public class EstadoTabelaService {
                 item.getCustoAtual(),
                 item.getRegistroCustoAtual(),
                 item.getDataCustoAtual(),
+                item.getMargemVerdadeira(),
+                item.getCustoVerdadeiro(),
+                item.getRegistroCustoVerdadeiro(),
+                item.getDataCustoVerdadeiro(),
                 item.getMargemPromob(),
                 item.getCustoPromob(),
                 item.getRegistroCustoPromob(),
@@ -107,6 +111,11 @@ public class EstadoTabelaService {
         item.setCustoAtual(valor(linha.getCustoAtual()));
         item.setRegistroCustoAtual(linha.getRegistroCustoAtual());
         item.setDataCustoAtual(linha.getDataCustoAtual());
+        
+        item.setMargemVerdadeira(valor(linha.getMargemVerdadeira()));
+        item.setCustoVerdadeiro(valor(linha.getCustoVerdadeiro()));
+        item.setRegistroCustoVerdadeiro(linha.getRegistroCustoVerdadeiro());
+        item.setDataCustoVerdadeiro(linha.getDataCustoVerdadeiro());
 
         item.setMargemPromob(valor(linha.getMargemPromob()));
         item.setCustoPromob(valor(linha.getCustoPromob()));

@@ -20,6 +20,11 @@
     -fx-fill: #000000;
 }
 
+.grupo-cinza .column-header,
+.coluna-cinza .column-header {
+    -fx-background-color: #7F7F7F;
+}
+
 .botao-ok-encalhado {
     -fx-background-color: #F2F2F2;
     -fx-border-color: #555555;

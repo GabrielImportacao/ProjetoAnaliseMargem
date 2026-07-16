@@ -40,6 +40,14 @@ public class ConfiguracaoUsuarioRepositorySqlite implements ConfiguracaoUsuarioR
             configuracao.setFlagItensEncalhados(
                     lerBoolean(valores, "flagItensEncalhados", configuracao.isFlagItensEncalhados())
             );
+            
+            configuracao.setCustoVerdadeiroAtivo(
+                    lerBoolean(valores, "custoVerdadeiroAtivo", configuracao.isCustoVerdadeiroAtivo())
+            );
+            
+            configuracao.setZoomInterface(
+                    lerInteiro(valores, "zoomInterface", configuracao.getZoomInterface())
+            );
 
         } catch (Exception e) {
             throw new RuntimeException("Erro ao carregar configurações do usuário.", e);
@@ -65,6 +73,8 @@ public class ConfiguracaoUsuarioRepositorySqlite implements ConfiguracaoUsuarioR
             salvarValor(conexao, "custoFuturo", configuracao.isCustoFuturo());
             salvarValor(conexao, "custoEstimado", configuracao.isCustoEstimado());
             salvarValor(conexao, "flagItensEncalhados", configuracao.isFlagItensEncalhados());
+            salvarValor(conexao, "custoVerdadeiroAtivo", configuracao.isCustoVerdadeiroAtivo());
+            salvarValor(conexao, "zoomInterface", configuracao.getZoomInterface());
 
             conexao.commit();
 
@@ -132,6 +142,19 @@ public class ConfiguracaoUsuarioRepositorySqlite implements ConfiguracaoUsuarioR
             statement.executeUpdate();
         }
     }
+    
+    private void salvarValor(Connection conexao, String chave, int valor) throws Exception {
+        String sql = """
+                INSERT OR REPLACE INTO configuracao_usuario (chave, valor)
+                VALUES (?, ?)
+                """;
+
+        try (PreparedStatement statement = conexao.prepareStatement(sql)) {
+            statement.setString(1, chave);
+            statement.setString(2, String.valueOf(valor));
+            statement.executeUpdate();
+        }
+    }
 
     private boolean lerBoolean(Map<String, String> valores, String chave, boolean padrao) {
         if (valores == null || !valores.containsKey(chave)) {
@@ -139,5 +162,17 @@ public class ConfiguracaoUsuarioRepositorySqlite implements ConfiguracaoUsuarioR
         }
 
         return Boolean.parseBoolean(valores.get(chave));
+    }
+    
+    private int lerInteiro(Map<String, String> valores, String chave, int padrao) {
+        if (valores == null || !valores.containsKey(chave)) {
+            return padrao;
+        }
+
+        try {
+            return Integer.parseInt(valores.get(chave));
+        } catch (Exception e) {
+            return padrao;
+        }
     }
 }

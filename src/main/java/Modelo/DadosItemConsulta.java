@@ -18,6 +18,11 @@ public class DadosItemConsulta {
     private final String registroCustoAtual;
     private final LocalDate dataCustoAtual;
     private final FonteCusto fonteCustoAtual;
+    
+    private final BigDecimal custoVerdadeiro;
+    private final String registroCustoVerdadeiro;
+    private final LocalDate dataCustoVerdadeiro;
+    private final FonteCusto fonteCustoVerdadeiro;
 
     private final BigDecimal custoPromob;
     private final String registroCustoPromob;
@@ -45,6 +50,10 @@ public class DadosItemConsulta {
             String registroCustoAtual,
             LocalDate dataCustoAtual,
             FonteCusto fonteCustoAtual,
+            BigDecimal custoVerdadeiro,
+            String registroCustoVerdadeiro,
+            LocalDate dataCustoVerdadeiro,
+            FonteCusto fonteCustoVerdadeiro,
             BigDecimal custoPromob,
             String registroCustoPromob,
             LocalDate dataCustoPromob,
@@ -68,6 +77,10 @@ public class DadosItemConsulta {
         this.registroCustoAtual = registroCustoAtual;
         this.dataCustoAtual = dataCustoAtual;
         this.fonteCustoAtual = fonteCustoAtual;
+        this.custoVerdadeiro = custoVerdadeiro;
+        this.registroCustoVerdadeiro = registroCustoVerdadeiro;
+        this.dataCustoVerdadeiro = dataCustoVerdadeiro;
+        this.fonteCustoVerdadeiro = fonteCustoVerdadeiro;
         this.custoPromob = custoPromob;
         this.registroCustoPromob = registroCustoPromob;
         this.dataCustoPromob = dataCustoPromob;
@@ -78,6 +91,22 @@ public class DadosItemConsulta {
         this.fonteCustoAnterior = fonteCustoAnterior;
         this.dataUltimaSaida = dataUltimaSaida;
         this.itemEncalhado = itemEncalhado;
+    }
+    
+    public BigDecimal getCustoVerdadeiro() {
+        return custoVerdadeiro;
+    }
+
+    public String getRegistroCustoVerdadeiro() {
+        return registroCustoVerdadeiro;
+    }
+
+    public LocalDate getDataCustoVerdadeiro() {
+        return dataCustoVerdadeiro;
+    }
+
+    public FonteCusto getFonteCustoVerdadeiro() {
+        return fonteCustoVerdadeiro;
     }
 
     public LocalDate getDataUltimaSaida() {

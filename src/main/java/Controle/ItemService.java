@@ -67,14 +67,17 @@ public class ItemService {
                 dadosConsulta.getDescricao(),
 
                 tratarBigDecimal(dadosConsulta.getCustoAtual()),
+                tratarBigDecimal(dadosConsulta.getCustoVerdadeiro()),
                 tratarBigDecimal(dadosConsulta.getCustoPromob()),
                 tratarBigDecimal(dadosConsulta.getCustoAnterior()),
 
                 tratarTexto(dadosConsulta.getRegistroCustoAtual()),
+                tratarTexto(dadosConsulta.getRegistroCustoVerdadeiro()),
                 tratarTexto(dadosConsulta.getRegistroCustoPromob()),
                 tratarTexto(dadosConsulta.getRegistroCustoAnterior()),
 
                 dadosConsulta.getDataCustoAtual(),
+                dadosConsulta.getDataCustoVerdadeiro(),
                 dadosConsulta.getDataCustoPromob(),
                 dadosConsulta.getDataCustoAnterior(),
                 dadosConsulta.getPrecoPadraoVenda(),

@@ -22,6 +22,11 @@ public class EstadoLinhaTabela {
     private final BigDecimal custoAtual;
     private final String registroCustoAtual;
     private final LocalDate dataCustoAtual;
+    
+    private final BigDecimal margemVerdadeira;
+    private final BigDecimal custoVerdadeiro;
+    private final String registroCustoVerdadeiro;
+    private final LocalDate dataCustoVerdadeiro;
 
     private final BigDecimal margemPromob;
     private final BigDecimal custoPromob;
@@ -57,6 +62,10 @@ public class EstadoLinhaTabela {
             BigDecimal custoAtual,
             String registroCustoAtual,
             LocalDate dataCustoAtual,
+            BigDecimal margemVerdadeira,
+            BigDecimal custoVerdadeiro,
+            String registroCustoVerdadeiro,
+            LocalDate dataCustoVerdadeiro,
             BigDecimal margemPromob,
             BigDecimal custoPromob,
             String registroCustoPromob,
@@ -100,6 +109,26 @@ public class EstadoLinhaTabela {
         this.dataUltimaSaida = dataUltimaSaida;
         this.itemEncalhado = itemEncalhado;
         this.itemEncalhadoConfirmado = itemEncalhadoConfirmado;
+        this.margemVerdadeira = margemVerdadeira;
+        this.custoVerdadeiro = custoVerdadeiro;
+        this.registroCustoVerdadeiro = registroCustoVerdadeiro;
+        this.dataCustoVerdadeiro = dataCustoVerdadeiro;
+    }
+    
+    public BigDecimal getMargemVerdadeira() {
+        return margemVerdadeira;
+    }
+
+    public BigDecimal getCustoVerdadeiro() {
+        return custoVerdadeiro;
+    }
+
+    public String getRegistroCustoVerdadeiro() {
+        return registroCustoVerdadeiro;
+    }
+
+    public LocalDate getDataCustoVerdadeiro() {
+        return dataCustoVerdadeiro;
     }
     
     public boolean isItemEncalhadoConfirmado() {
