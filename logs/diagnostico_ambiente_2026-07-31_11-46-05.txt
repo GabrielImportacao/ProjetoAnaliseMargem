@@ -1,5 +1,5 @@
 ===== DIAGNOSTICO DE AMBIENTE =====
-Data/Hora: 2026-07-14T08:42:52.743887100
+Data/Hora: 2026-07-31T11:46:05.307351300
 user.dir: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
 user.home: C:\Users\import3
 java.version: 25.0.2

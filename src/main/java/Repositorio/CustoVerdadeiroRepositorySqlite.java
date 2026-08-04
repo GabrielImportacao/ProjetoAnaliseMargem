@@ -25,7 +25,11 @@ import java.sql.Statement;
 
 public class CustoVerdadeiroRepositorySqlite implements CustoVerdadeiroRepository {
 
-    private static final String DEPOSITO_PADRAO_CUSTO_VERDADEIRO = "140";
+	private static final List<String> DEPOSITOS_CUSTO_VERDADEIRO =
+	        List.of(
+	                "140",
+	                "191"
+	        );
     private static final BigDecimal DIVISOR_QTDE_LOTE = new BigDecimal("10000");
 
     private static final Pattern PADRAO_LOTE_EXTERNO =
@@ -36,7 +40,12 @@ public class CustoVerdadeiroRepositorySqlite implements CustoVerdadeiroRepositor
     private final ConexaoSqlite conexaoCustosSqlite;
 
     private Map<String, BigDecimal> cacheEstoquePorItem;
-    private Map<String, List<LoteEstoqueItem>> cacheLotesPorItem;
+
+    private Map<String, Map<String, BigDecimal>>
+            cacheEstoquePorItemEDeposito;
+
+    private Map<String, List<LoteEstoqueItem>>
+            cacheLotesPorItem;
     private Map<String, CustoLote> cacheCustoPorItemEProcesso;
     private Map<String, List<ImportacaoCustoLog>> cacheImportacoesPorItem;
 
@@ -48,6 +57,7 @@ public class CustoVerdadeiroRepositorySqlite implements CustoVerdadeiroRepositor
 
     public void limparCache() {
         cacheEstoquePorItem = null;
+        cacheEstoquePorItemEDeposito = null;
         cacheLotesPorItem = null;
         cacheCustoPorItemEProcesso = null;
         cacheImportacoesPorItem = null;
@@ -159,13 +169,51 @@ public class CustoVerdadeiroRepositorySqlite implements CustoVerdadeiroRepositor
         diagnostico.append("\n=================================================\n");
         diagnostico.append("Data/Hora: ").append(LocalDateTime.now()).append("\n");
         diagnostico.append("ITEM: ").append(chaveItem).append("\n");
-        diagnostico.append("DEPÓSITO: ").append(DEPOSITO_PADRAO_CUSTO_VERDADEIRO).append("\n\n");
+        diagnostico.append("DEPÓSITOS CONSIDERADOS: ")
+        .append(
+                String.join(
+                        ", ",
+                        DEPOSITOS_CUSTO_VERDADEIRO
+                )
+        )
+        .append("\n\n");
 
         BigDecimal estoqueAtual = valorSeguro(cacheEstoquePorItem.get(chaveItem));
 
-        diagnostico.append("ESTOQUE ATUAL itemdepo: ")
-                .append(formatarDecimalLog(estoqueAtual))
-                .append("\n\n");
+        diagnostico.append("ESTOQUE ATUAL TOTAL itemdepo: ")
+        .append(
+                formatarDecimalLog(
+                        estoqueAtual
+                )
+        )
+        .append("\n");
+
+Map<String, BigDecimal> estoquePorDeposito =
+        cacheEstoquePorItemEDeposito
+                .getOrDefault(
+                        chaveItem,
+                        Map.of()
+                );
+
+for (
+        String deposito
+        : DEPOSITOS_CUSTO_VERDADEIRO
+) {
+    diagnostico.append("ESTOQUE DEPÓSITO ")
+            .append(deposito)
+            .append(": ")
+            .append(
+                    formatarDecimalLog(
+                            valorSeguro(
+                                    estoquePorDeposito
+                                            .get(deposito)
+                            )
+                    )
+            )
+            .append("\n");
+}
+
+diagnostico.append("\n");
         
         registrarImportacoesDoItemNoLog(diagnostico, chaveItem);
         registrarEstruturaCustosDbNoLog(diagnostico);
@@ -255,6 +303,10 @@ public class CustoVerdadeiroRepositorySqlite implements CustoVerdadeiroRepositor
 
             List<String> processosPossiveis = extrairProcessosPossiveis(lote.getLoteExterno());
 
+            diagnostico.append("DEPÓSITO DO LOTE: ")
+            .append(lote.getDeposito())
+            .append("\n");
+            
             diagnostico.append("LOTE: ").append(lote.getLoteExterno()).append("\n");
             diagnostico.append("QTD LOTE: ").append(formatarDecimalLog(lote.getQuantidade())).append("\n");
             diagnostico.append("PROCESSOS TENTADOS: ")
@@ -351,12 +403,14 @@ public class CustoVerdadeiroRepositorySqlite implements CustoVerdadeiroRepositor
     }
 
     private void carregarCachesSeNecessario() {
-        if (cacheEstoquePorItem != null
-                && cacheLotesPorItem != null
-                && cacheCustoPorItemEProcesso != null
-                && cacheImportacoesPorItem != null) {
-            return;
-        }
+    	if (cacheEstoquePorItem != null
+    	        && cacheEstoquePorItemEDeposito != null
+    	        && cacheLotesPorItem != null
+    	        && cacheCustoPorItemEProcesso != null
+    	        && cacheImportacoesPorItem != null) {
+
+    	    return;
+    	}
 
         cacheEstoquePorItem = carregarEstoquePorItem();
         cacheLotesPorItem = carregarLotesPorItem();
@@ -364,90 +418,236 @@ public class CustoVerdadeiroRepositorySqlite implements CustoVerdadeiroRepositor
         cacheCustoPorItemEProcesso = carregarCustosPorItemEProcesso();
     }
 
-    private Map<String, BigDecimal> carregarEstoquePorItem() {
-        Map<String, BigDecimal> mapa = new HashMap<>();
+    private Map<String, BigDecimal>
+    carregarEstoquePorItem() {
+
+        Map<String, BigDecimal> mapa =
+                new HashMap<>();
+
+        cacheEstoquePorItemEDeposito =
+                new HashMap<>();
 
         String sql = """
                 SELECT
                     item,
+                    TRIM(
+                        CAST(
+                            codigo_deposito AS TEXT
+                        )
+                    ) AS deposito,
                     estoque_atual
                 FROM item_deposito
-                WHERE TRIM(codigo_deposito) = ?
+                WHERE TRIM(
+                        CAST(
+                            codigo_deposito AS TEXT
+                        )
+                      ) IN (?, ?)
                   AND item IS NOT NULL
                 """;
 
         try (
-                Connection conexao = conexaoItemDepoSqlite.abrir();
-                PreparedStatement statement = conexao.prepareStatement(sql)
+                Connection conexao =
+                        conexaoItemDepoSqlite.abrir();
+
+                PreparedStatement statement =
+                        conexao.prepareStatement(sql)
         ) {
-            statement.setString(1, DEPOSITO_PADRAO_CUSTO_VERDADEIRO);
+            statement.setString(
+                    1,
+                    DEPOSITOS_CUSTO_VERDADEIRO.get(0)
+            );
 
-            try (ResultSet resultSet = statement.executeQuery()) {
+            statement.setString(
+                    2,
+                    DEPOSITOS_CUSTO_VERDADEIRO.get(1)
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
                 while (resultSet.next()) {
-                    String item = normalizarCodigo(resultSet.getString("item"));
-                    BigDecimal estoque = converterBigDecimal(resultSet.getString("estoque_atual"));
+                    String item =
+                            normalizarCodigo(
+                                    resultSet.getString(
+                                            "item"
+                                    )
+                            );
 
-                    if (!item.isBlank()) {
-                        mapa.put(item, estoque);
+                    String deposito =
+                            tratarTexto(
+                                    resultSet.getString(
+                                            "deposito"
+                                    )
+                            );
+
+                    BigDecimal estoque =
+                            converterBigDecimal(
+                                    resultSet.getString(
+                                            "estoque_atual"
+                                    )
+                            );
+
+                    if (item.isBlank()
+                            || deposito.isBlank()) {
+
+                        continue;
                     }
+
+                    /*
+                     * Total combinado dos depósitos 140 e 191.
+                     */
+                    mapa.merge(
+                            item,
+                            estoque,
+                            BigDecimal::add
+                    );
+
+                    /*
+                     * Valor separado por depósito para o log
+                     * e para as validações futuras.
+                     */
+                    cacheEstoquePorItemEDeposito
+                            .computeIfAbsent(
+                                    item,
+                                    chave ->
+                                            new HashMap<>()
+                            )
+                            .merge(
+                                    deposito,
+                                    estoque,
+                                    BigDecimal::add
+                            );
                 }
             }
 
         } catch (Exception e) {
-            throw new RuntimeException("Erro ao carregar estoque atual para custo verdadeiro.", e);
+            throw new RuntimeException(
+                    "Erro ao carregar estoque atual dos "
+                            + "depósitos 140 e 191 para "
+                            + "custo verdadeiro.",
+                    e
+            );
         }
 
         return mapa;
     }
 
-    private Map<String, List<LoteEstoqueItem>> carregarLotesPorItem() {
-        Map<String, List<LoteEstoqueItem>> mapa = new HashMap<>();
+    private Map<String, List<LoteEstoqueItem>>
+    carregarLotesPorItem() {
+
+        Map<String, List<LoteEstoqueItem>> mapa =
+                new HashMap<>();
 
         String sql = """
                 SELECT
                     ITEM,
+                    TRIM(
+                        CAST(
+                            CODIGO_DEPOSITO AS TEXT
+                        )
+                    ) AS DEPOSITO,
                     LOTE_EXTERNO,
                     QTDE
                 FROM item_ltoe
-                WHERE TRIM(CAST(CODIGO_DEPOSITO AS TEXT)) = ?
+                WHERE TRIM(
+                        CAST(
+                            CODIGO_DEPOSITO AS TEXT
+                        )
+                      ) IN (?, ?)
                   AND ITEM IS NOT NULL
                   AND QTDE IS NOT NULL
                   AND QTDE > 0
                 """;
 
         try (
-                Connection conexao = conexaoItemLtoeSqlite.abrir();
-                PreparedStatement statement = conexao.prepareStatement(sql)
+                Connection conexao =
+                        conexaoItemLtoeSqlite.abrir();
+
+                PreparedStatement statement =
+                        conexao.prepareStatement(sql)
         ) {
-            statement.setString(1, DEPOSITO_PADRAO_CUSTO_VERDADEIRO);
+            statement.setString(
+                    1,
+                    DEPOSITOS_CUSTO_VERDADEIRO.get(0)
+            );
 
-            try (ResultSet resultSet = statement.executeQuery()) {
+            statement.setString(
+                    2,
+                    DEPOSITOS_CUSTO_VERDADEIRO.get(1)
+            );
+
+            try (
+                    ResultSet resultSet =
+                            statement.executeQuery()
+            ) {
                 while (resultSet.next()) {
-                    String codigoItem = normalizarCodigo(resultSet.getString("ITEM"));
+                    String codigoItem =
+                            normalizarCodigo(
+                                    resultSet.getString(
+                                            "ITEM"
+                                    )
+                            );
 
-                    if (!ehItemElegivelParaCustoVerdadeiro(codigoItem)) {
+                    if (!ehItemElegivelParaCustoVerdadeiro(
+                            codigoItem
+                    )) {
                         continue;
                     }
 
-                    BigDecimal quantidade = converterBigDecimal(resultSet.getString("QTDE"))
-                            .divide(DIVISOR_QTDE_LOTE, 6, RoundingMode.HALF_UP);
+                    String deposito =
+                            tratarTexto(
+                                    resultSet.getString(
+                                            "DEPOSITO"
+                                    )
+                            );
 
-                    if (quantidade.compareTo(BigDecimal.ZERO) <= 0) {
+                    BigDecimal quantidade =
+                            converterBigDecimal(
+                                    resultSet.getString(
+                                            "QTDE"
+                                    )
+                            ).divide(
+                                    DIVISOR_QTDE_LOTE,
+                                    6,
+                                    RoundingMode.HALF_UP
+                            );
+
+                    if (deposito.isBlank()
+                            || quantidade.compareTo(
+                                    BigDecimal.ZERO
+                            ) <= 0) {
+
                         continue;
                     }
 
-                    LoteEstoqueItem lote = new LoteEstoqueItem(
+                    LoteEstoqueItem lote =
+                            new LoteEstoqueItem(
+                                    codigoItem,
+                                    deposito,
+                                    tratarTexto(
+                                            resultSet.getString(
+                                                    "LOTE_EXTERNO"
+                                            )
+                                    ),
+                                    quantidade
+                            );
+
+                    mapa.computeIfAbsent(
                             codigoItem,
-                            tratarTexto(resultSet.getString("LOTE_EXTERNO")),
-                            quantidade
-                    );
-
-                    mapa.computeIfAbsent(codigoItem, k -> new ArrayList<>()).add(lote);
+                            chave ->
+                                    new ArrayList<>()
+                    ).add(lote);
                 }
             }
 
         } catch (Exception e) {
-            throw new RuntimeException("Erro ao carregar lotes de estoque para custo verdadeiro.", e);
+            throw new RuntimeException(
+                    "Erro ao carregar lotes dos "
+                            + "depósitos 140 e 191 para "
+                            + "custo verdadeiro.",
+                    e
+            );
         }
 
         return mapa;

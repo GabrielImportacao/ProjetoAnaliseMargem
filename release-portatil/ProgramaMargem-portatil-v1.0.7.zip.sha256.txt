@@ -1,0 +1,3 @@
+SHA256 hash de C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem\release-portatil\ProgramaMargem-portatil-v1.0.7.zip:
+d0d7e984f761fd83104b01699a494d0950370828e0931a76d5e2bc099582f461
+CertUtil: -hashfile : comando concluído com êxito.

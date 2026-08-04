@@ -3,11 +3,17 @@ package Controle;
 import Modelo.*;
 import Repositorio.*;
 
+import Configuracao.ConfiguracaoUsuario;
 import Configuracao.ConfiguracaoUsuarioService;
+import Infraestrutura.DiagnosticoCustoReposicao;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class DadosItemService {
 
@@ -178,6 +184,13 @@ public class DadosItemService {
                 .orElse(null);
 
         boolean itemEncalhado = calcularItemEncalhado(ultimaSaidaEncontrada);
+        
+        CustoReposicaoResolvido
+        custoReposicao =
+        resolverCustoReposicao(
+                codigoItem,
+                item
+        );
 
         CustoResolvido custoAtual = resolverCustoAtual(item, historicoCusto, itemImportado);
         CustoResolvido custoVerdadeiro = resolverCustoVerdadeiro(codigoItem);
@@ -193,6 +206,9 @@ public class DadosItemService {
                 item.getPesoBruto(),
                 item.getPesoLiquido(),
                 item.getPrecoUnitarioLiquidoAtual(),
+                
+                custoReposicao.custoBrl(),
+                custoReposicao.processo(),
 
                 custoAtual.custo(),
                 custoAtual.registro(),
@@ -219,6 +235,61 @@ public class DadosItemService {
         );
 
         return Optional.of(dados);
+    }
+    
+    private CustoReposicaoResolvido
+    resolverCustoReposicao(
+            String codigoItem
+    ) {
+        Optional<CustoItem> processoMaisRecente =
+                custoRepository
+                        .buscarProcessoReposicaoMaisRecentePorItem(
+                                codigoItem
+                        );
+
+        if (processoMaisRecente.isEmpty()) {
+            return new CustoReposicaoResolvido(
+                    null,
+                    ""
+            );
+        }
+
+        CustoItem custoItem =
+                processoMaisRecente.get();
+
+        /*
+         * O próprio CustoItem aplica:
+         *
+         * CI válida
+         * → usa CI
+         *
+         * CI vazia ou zerada
+         * → usa PI
+         */
+        BigDecimal valorReposicaoUsd =
+                custoItem
+                        .getValorReposicaoUsd();
+
+        if (valorReposicaoUsd == null
+                || valorReposicaoUsd.compareTo(
+                        BigDecimal.ZERO
+                ) <= 0) {
+
+            return new CustoReposicaoResolvido(
+                    null,
+                    ""
+            );
+        }
+
+        String processoReposicao =
+                custoItem.getRegistroImportacao();
+
+        return new CustoReposicaoResolvido(
+                valorReposicaoUsd,
+                processoReposicao == null
+                        ? ""
+                        : processoReposicao.trim()
+        );
     }
     
     private CustoResolvido resolverCustoVerdadeiro(String codigoItem) {
@@ -364,6 +435,12 @@ public class DadosItemService {
                 || codigoNormalizado.startsWith("MSC")
                 || codigoNormalizado.startsWith("MPR")
         		|| codigoNormalizado.startsWith("MPA");
+    }
+    
+    private record CustoReposicaoResolvido(
+            BigDecimal valorUsd,
+            String processo
+    ) {
     }
     
     private record CustoResolvido(

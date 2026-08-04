@@ -5,15 +5,21 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.scene.control.ButtonType;
+
+import javafx.scene.control.ButtonType;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -26,7 +32,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
-import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -62,15 +67,21 @@ public class TelaConfiguracoes {
     private Label abaEstadosLabel;
     private Label abaUsuarioLabel;
     
+    private boolean limpezaUserDataSolicitada = false;
+    
     private final ConfiguracaoUsuarioService configuracaoUsuarioService = new ConfiguracaoUsuarioService();
 
     private ConfiguracaoUsuario configuracaoUsuario = new ConfiguracaoUsuario();
     private ConfiguracaoUsuario configuracaoEdicao = new ConfiguracaoUsuario();
+    
 
-    public void exibir(Window janelaDona) {
+    public boolean exibir(Window janelaDona) {
+    	limpezaUserDataSolicitada = false;
+    	
         Stage stage = new Stage();
         configuracaoUsuario = configuracaoUsuarioService.carregar();
         configuracaoEdicao = new ConfiguracaoUsuario(configuracaoUsuario);
+        
         stage.setTitle("Configurações");
         stage.initStyle(StageStyle.TRANSPARENT);
         stage.initModality(Modality.WINDOW_MODAL);
@@ -118,6 +129,7 @@ public class TelaConfiguracoes {
         trocarAba(AbaConfiguracao.TABELA);
 
         stage.showAndWait();
+        return limpezaUserDataSolicitada;
     }
 
     private HBox criarBarraTitulo(Stage stage) {
@@ -334,7 +346,7 @@ public class TelaConfiguracoes {
         );
 
         CheckBoxVisual custoFuturo = new CheckBoxVisual(
-                "Custo Futuro",
+                "Custo de Reposição",
                 configuracaoEdicao.isCustoFuturo(),
                 marcado -> configuracaoEdicao.setCustoFuturo(marcado)
         );
@@ -346,7 +358,7 @@ public class TelaConfiguracoes {
         );
 
         CheckBoxVisual flagEncalhados = new CheckBoxVisual(
-                "Flag de Itens Encalhados",
+                "Flag de Itens Obsoletos",
                 configuracaoEdicao.isFlagItensEncalhados(),
                 marcado -> configuracaoEdicao.setFlagItensEncalhados(marcado)
         );
@@ -547,16 +559,33 @@ public class TelaConfiguracoes {
     private List<EstadoConfigVisual> criarEstadosPrototipo() {
         List<EstadoConfigVisual> estados = new ArrayList<>();
 
-        estados.add(new EstadoConfigVisual("São Paulo", new BigDecimal("50.00")));
-        estados.add(new EstadoConfigVisual("Santa Catarina", new BigDecimal("40.22")));
-        estados.add(new EstadoConfigVisual("Acre", new BigDecimal("50.00")));
-        estados.add(new EstadoConfigVisual("Alagoas", new BigDecimal("50.00")));
-        estados.add(new EstadoConfigVisual("Amapá", new BigDecimal("50.00")));
-        estados.add(new EstadoConfigVisual("Amazonas", new BigDecimal("50.00")));
-        estados.add(new EstadoConfigVisual("Bahia", new BigDecimal("50.00")));
-        estados.add(new EstadoConfigVisual("Ceará", new BigDecimal("50.00")));
-        estados.add(new EstadoConfigVisual("Distrito Federal", new BigDecimal("50.00")));
-        estados.add(new EstadoConfigVisual("Espírito Santo", new BigDecimal("50.00")));
+        estados.add(new EstadoConfigVisual("SP", "São Paulo"));
+        estados.add(new EstadoConfigVisual("SC", "Santa Catarina"));
+        estados.add(new EstadoConfigVisual("AC", "Acre"));
+        estados.add(new EstadoConfigVisual("AL", "Alagoas"));
+        estados.add(new EstadoConfigVisual("AP", "Amapá"));
+        estados.add(new EstadoConfigVisual("AM", "Amazonas"));
+        estados.add(new EstadoConfigVisual("BA", "Bahia"));
+        estados.add(new EstadoConfigVisual("CE", "Ceará"));
+        estados.add(new EstadoConfigVisual("DF", "Distrito Federal"));
+        estados.add(new EstadoConfigVisual("ES", "Espírito Santo"));
+        estados.add(new EstadoConfigVisual("GO", "Goiás"));
+        estados.add(new EstadoConfigVisual("MA", "Maranhão"));
+        estados.add(new EstadoConfigVisual("MT", "Mato Grosso"));
+        estados.add(new EstadoConfigVisual("MS", "Mato Grosso do Sul"));
+        estados.add(new EstadoConfigVisual("MG", "Minas Gerais"));
+        estados.add(new EstadoConfigVisual("PA", "Pará"));
+        estados.add(new EstadoConfigVisual("PB", "Paraíba"));
+        estados.add(new EstadoConfigVisual("PR", "Paraná"));
+        estados.add(new EstadoConfigVisual("PE", "Pernambuco"));
+        estados.add(new EstadoConfigVisual("PI", "Piauí"));
+        estados.add(new EstadoConfigVisual("RJ", "Rio de Janeiro"));
+        estados.add(new EstadoConfigVisual("RN", "Rio Grande do Norte"));
+        estados.add(new EstadoConfigVisual("RS", "Rio Grande do Sul"));
+        estados.add(new EstadoConfigVisual("RO", "Rondônia"));
+        estados.add(new EstadoConfigVisual("RR", "Roraima"));
+        estados.add(new EstadoConfigVisual("SE", "Sergipe"));
+        estados.add(new EstadoConfigVisual("TO", "Tocantins"));
 
         return estados;
     }
@@ -575,7 +604,10 @@ public class TelaConfiguracoes {
                 "-fx-text-fill: " + COR_TEXTO + ";"
         );
 
-        Label percentual = new Label(formatarPercentual(estado.percentual()));
+        BigDecimal baseAtual =
+                configuracaoEdicao.getBaseEstado(estado.sigla());
+
+        Label percentual = new Label(formatarPercentual(baseAtual));
         percentual.setMinWidth(90);
         percentual.setPrefWidth(90);
         percentual.setAlignment(Pos.CENTER_RIGHT);
@@ -585,23 +617,121 @@ public class TelaConfiguracoes {
                 "-fx-text-fill: " + COR_TEXTO + ";"
         );
 
-        StackPane editar = new StackPane(carregarIcone("Lapis.png", 14, 14));
+        StackPane editar = new StackPane(
+                carregarIcone("Lapis.png", 14, 14)
+        );
+
         editar.setCursor(Cursor.HAND);
         editar.setMinSize(24, 24);
         editar.setPrefSize(24, 24);
         editar.setMaxSize(24, 24);
-        
+
         editar.setOnMouseEntered(event -> editar.setOpacity(0.70));
+
         editar.setOnMouseExited(event -> {
             editar.setOpacity(1.0);
             editar.setTranslateY(0);
         });
+
         editar.setOnMousePressed(event -> editar.setTranslateY(1));
         editar.setOnMouseReleased(event -> editar.setTranslateY(0));
 
-        linha.getChildren().addAll(nome, percentual, editar);
+        editar.setOnMouseClicked(event ->
+                editarBaseEstado(estado, percentual)
+        );
+
+        linha.getChildren().addAll(
+                nome,
+                percentual,
+                editar
+        );
 
         return linha;
+    }
+    
+    private void editarBaseEstado(
+            EstadoConfigVisual estado,
+            Label percentualLabel
+    ) {
+    	BigDecimal valorAtual =
+    	        configuracaoEdicao.getBaseEstado(estado.sigla());
+
+        String textoAtual = valorAtual
+                .setScale(2, java.math.RoundingMode.HALF_UP)
+                .toString()
+                .replace(".", ",");
+
+        TextInputDialog dialogo = new TextInputDialog(textoAtual);
+
+        dialogo.setTitle("Editar base do estado");
+        dialogo.setHeaderText(estado.nome());
+        dialogo.setContentText("Nova base (%):");
+
+        if (areaConteudo.getScene() != null) {
+            dialogo.initOwner(
+                    areaConteudo.getScene().getWindow()
+            );
+        }
+
+        Optional<String> resultado = dialogo.showAndWait();
+
+        if (resultado.isEmpty()) {
+            return;
+        }
+
+        String textoInformado = resultado.get()
+                .trim()
+                .replace("%", "")
+                .replace(" ", "")
+                .replace(",", ".");
+
+        try {
+            BigDecimal novoValor = new BigDecimal(textoInformado)
+                    .setScale(
+                            2,
+                            java.math.RoundingMode.HALF_UP
+                    );
+
+            if (novoValor.compareTo(BigDecimal.ZERO) < 0
+                    || novoValor.compareTo(new BigDecimal("100.00")) > 0) {
+
+                mostrarErroBaseEstado(
+                        "Informe um percentual entre 0,00% e 100,00%."
+                );
+
+                return;
+            }
+
+            configuracaoEdicao.setBaseEstado(
+                    estado.sigla(),
+                    novoValor
+            );
+
+            percentualLabel.setText(
+                    formatarPercentual(novoValor)
+            );
+
+        } catch (NumberFormatException e) {
+            mostrarErroBaseEstado(
+                    "Digite um percentual válido, como 50,00."
+            );
+        }
+    }
+    
+    private void mostrarErroBaseEstado(String mensagem) {
+        Alert alerta = new Alert(Alert.AlertType.ERROR);
+
+        alerta.setTitle("Valor inválido");
+        alerta.setHeaderText(null);
+        alerta.setContentText(mensagem);
+
+        if (areaConteudo.getScene() != null) {
+            alerta.initOwner(
+                    areaConteudo.getScene().getWindow()
+            );
+        }
+
+        alerta.showAndWait();
     }
 
     private VBox criarConteudoUsuario() {
@@ -627,12 +757,79 @@ public class TelaConfiguracoes {
                 estiloBotaoVermelhoHover(),
                 estiloBotaoVermelhoPressionado()
         );
+        
+        limparUserData.setOnAction(event ->
+        		solicitarLimpezaUserData(limparUserData)
+        );
 
         VBox.setMargin(usuario, new Insets(8, 0, 35, 0));
 
         box.getChildren().addAll(avatar, usuario, limparUserData);
 
         return box;
+    }
+    
+    private void solicitarLimpezaUserData(
+            Button botaoOrigem
+    ) {
+        Alert confirmacao =
+                new Alert(Alert.AlertType.CONFIRMATION);
+
+        confirmacao.setTitle(
+                "Limpar dados do usuário"
+        );
+
+        confirmacao.setHeaderText(
+                "Restaurar o programa para o estado padrão?"
+        );
+
+        confirmacao.setContentText(
+                "Esta ação irá:\n\n"
+                        + "• limpar todos os itens da tabela;\n"
+                        + "• restaurar a ordem padrão das colunas;\n"
+                        + "• restaurar as bases dos estados;\n"
+                        + "• restaurar o zoom para 100%;\n"
+                        + "• remover todas as cores aplicadas às linhas;\n"
+                        + "• restaurar as opções padrão.\n\n"
+                        + "Esta ação não poderá ser desfeita."
+        );
+
+        ButtonType botaoResetar =
+                new ButtonType("RESETAR");
+
+        confirmacao.getButtonTypes().setAll(
+                ButtonType.CANCEL,
+                botaoResetar
+        );
+
+        if (botaoOrigem != null
+                && botaoOrigem.getScene() != null) {
+
+            confirmacao.initOwner(
+                    botaoOrigem
+                            .getScene()
+                            .getWindow()
+            );
+        }
+
+        ButtonType resposta = confirmacao
+                .showAndWait()
+                .orElse(ButtonType.CANCEL);
+
+        if (!botaoResetar.equals(resposta)) {
+            return;
+        }
+
+        limpezaUserDataSolicitada = true;
+
+        if (botaoOrigem != null
+                && botaoOrigem.getScene() != null
+                && botaoOrigem
+                        .getScene()
+                        .getWindow() instanceof Stage stage) {
+
+            stage.close();
+        }
     }
 
     private StackPane criarAvatarUsuario() {
@@ -734,7 +931,7 @@ public class TelaConfiguracoes {
         USUARIO
     }
 
-    private record EstadoConfigVisual(String nome, BigDecimal percentual) {
+    private record EstadoConfigVisual(String sigla, String nome) {
     }
 
     private class CheckBoxVisual extends HBox {

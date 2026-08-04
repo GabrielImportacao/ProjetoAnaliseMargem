@@ -124,8 +124,19 @@ public class ItemRepositoryXlsb implements ItemRepository {
                 converterBigDecimal(valor(linha, colunas, "PESO BRUTO (KG)")),
                 converterBigDecimal(valor(linha, colunas, "PESO LIQUIDO (KG)")),
                 converterBigDecimal(valor(linha, colunas, "CUSTO UNIT. ATUAL (BRL)")),
-                valor(linha, colunas, "REG. CUSTO ATUAL"),
-                converterBigDecimal(valor(linha, colunas, "PRECO UNIT. LIQUIDO ATUAL (BRL)"))
+                valor(
+                        linha,
+                        colunas,
+                        "REG. CUSTO ATUAL"
+                ),
+                converterBigDecimal(
+                        valor(
+                                linha,
+                                colunas,
+                                "PRECO UNIT. LIQUIDO ATUAL (BRL)"
+                        )
+                ),
+                null
         );
     }
 

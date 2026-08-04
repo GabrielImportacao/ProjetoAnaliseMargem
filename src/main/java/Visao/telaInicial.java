@@ -24,8 +24,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import Controle.SincronizacaoBasesService.ResultadoBase;
+import Controle.SincronizacaoBasesService.ResultadoSincronizacao;
 
-import javafx.scene.Group;
+import java.util.function.UnaryOperator;
+
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javafx.scene.transform.Scale;
 
@@ -91,6 +97,7 @@ public class telaInicial extends Application {
     private final ObservableList<ItemAnalise> itens = FXCollections.observableArrayList();
     private final LayoutTabelaService layoutTabelaService = new LayoutTabelaService();
     private final EstadoTabelaService estadoTabelaService = new EstadoTabelaService();
+    private boolean atualizandoListaEstadosProgramaticamente = false;
     
     private final Label totalPropostaLabel = new Label("R$ 0,00");
     private final Label resultadoAtualComIpiLabel = new Label("R$ 0,00");
@@ -103,6 +110,9 @@ public class telaInicial extends Application {
     private final Label baseEstadoLabel = new Label("0,00%");
     
     private StackPane rootComOverlayPrincipal;
+    private ProgressIndicator progressoOverlayAtualizacao;
+    private Label textoOverlayAtualizacao;
+    private Label subtextoOverlayAtualizacao;
     private final Scale escalaInterface = new Scale(1, 1, 0, 0);
     
     private final Label ultimaAtualizacaoLabel = new Label("Última atualização: --/--/----\nàs --:--");
@@ -133,13 +143,24 @@ public class telaInicial extends Application {
     private boolean aplicandoLayoutTabela = false;
     private boolean salvamentoLayoutTabelaPendente = false;
     
+    private TableColumn<ItemAnalise, String>
+    custoReposicaoGrupoCol;
+    
     private final ConfiguracaoUsuarioService configuracaoUsuarioService = new ConfiguracaoUsuarioService();
     private ConfiguracaoUsuario configuracaoUsuario = configuracaoUsuarioService.carregar();
     
     private static final PseudoClass PSEUDO_ITEM_ENCALHADO =
             PseudoClass.getPseudoClass("item-encalhado");
     
-    private Group grupoConteudoZoom;
+    private static final PseudoClass PSEUDO_CONDICAO_COLORIDA =
+            PseudoClass.getPseudoClass("condicao-colorida");
+    
+    private static final PseudoClass PSEUDO_LINHA_RODAPE_TABELA =
+            PseudoClass.getPseudoClass(
+                    "linha-rodape-tabela"
+            );
+    
+    private Pane painelConteudoZoom;
     private ScrollPane scrollConteudoPrincipal;
     
     private Timeline atualizacaoAutomaticaTimeline;
@@ -156,11 +177,92 @@ public class telaInicial extends Application {
     
     private final DoubleProperty fatorZoomInterfaceProperty = new SimpleDoubleProperty(1.0);
     
+    private HBox linhaCotacaoDolar;
+    private TextField campoCotacaoDolar;
+    
+    private HBox linhaFatorImportacao;
+    private TextField campoFatorImportacao;
+    
     public static void main(String[] args) {
         launch(args);
     }
     
+    private void carregarEstadosConfigurados(
+            String siglaSelecionada
+    ) {
+        atualizandoListaEstadosProgramaticamente = true;
+
+        try {
+            estadoCombo.setItems(
+                    FXCollections.observableArrayList(
+                            criarEstadoConfigurado("SP"),
+                            criarEstadoConfigurado("SC"),
+                            criarEstadoConfigurado("AC"),
+                            criarEstadoConfigurado("AL"),
+                            criarEstadoConfigurado("AP"),
+                            criarEstadoConfigurado("AM"),
+                            criarEstadoConfigurado("BA"),
+                            criarEstadoConfigurado("CE"),
+                            criarEstadoConfigurado("DF"),
+                            criarEstadoConfigurado("ES"),
+                            criarEstadoConfigurado("GO"),
+                            criarEstadoConfigurado("MA"),
+                            criarEstadoConfigurado("MT"),
+                            criarEstadoConfigurado("MS"),
+                            criarEstadoConfigurado("MG"),
+                            criarEstadoConfigurado("PA"),
+                            criarEstadoConfigurado("PB"),
+                            criarEstadoConfigurado("PR"),
+                            criarEstadoConfigurado("PE"),
+                            criarEstadoConfigurado("PI"),
+                            criarEstadoConfigurado("RJ"),
+                            criarEstadoConfigurado("RN"),
+                            criarEstadoConfigurado("RS"),
+                            criarEstadoConfigurado("RO"),
+                            criarEstadoConfigurado("RR"),
+                            criarEstadoConfigurado("SE"),
+                            criarEstadoConfigurado("TO")
+                    )
+            );
+
+            String siglaParaSelecionar =
+                    siglaSelecionada == null
+                            || siglaSelecionada.isBlank()
+                            ? "SP"
+                            : siglaSelecionada;
+
+            EstadoInfo estadoEncontrado =
+                    estadoCombo.getItems()
+                            .stream()
+                            .filter(estado ->
+                                    siglaParaSelecionar.equals(
+                                            estado.getSigla()
+                                    )
+                            )
+                            .findFirst()
+                            .orElse(
+                                    estadoCombo.getItems().get(0)
+                            );
+
+            estadoCombo.getSelectionModel().select(
+                    estadoEncontrado
+            );
+        } finally {
+            atualizandoListaEstadosProgramaticamente = false;
+        }
+    }
     
+    private EstadoInfo criarEstadoConfigurado(String sigla) {
+        BigDecimal percentual =
+                configuracaoUsuario == null
+                        ? new BigDecimal("50.00")
+                        : configuracaoUsuario.getBaseEstado(sigla);
+
+        return new EstadoInfo(
+                sigla,
+                percentual
+        );
+    }
     
     private void tratarNavegacaoCampoEditavel(
         KeyEvent event,
@@ -238,27 +340,183 @@ public class telaInicial extends Application {
         return obterZoomInterfaceSeguro() / 100.0;
     }
 
+    
     private void aplicarZoomInterface() {
-        double fator = obterFatorZoomInterface();
+        double fator =
+                obterFatorZoomInterface();
 
-        fatorZoomInterfaceProperty.set(fator);
+        fatorZoomInterfaceProperty.set(
+                fator
+        );
 
-        escalaInterface.setX(fator);
-        escalaInterface.setY(fator);
+        escalaInterface.setX(
+                fator
+        );
+
+        escalaInterface.setY(
+                fator
+        );
 
         Platform.runLater(() -> {
+            atualizarDimensoesConteudoZoom();
+
             if (rootComOverlayPrincipal != null) {
                 rootComOverlayPrincipal.requestLayout();
             }
 
-            if (grupoConteudoZoom != null) {
-                grupoConteudoZoom.requestLayout();
+            if (painelConteudoZoom != null) {
+                painelConteudoZoom.requestLayout();
             }
 
             if (scrollConteudoPrincipal != null) {
                 scrollConteudoPrincipal.requestLayout();
+
+                /*
+                 * Sempre inicia pelo lado esquerdo após alterar
+                 * o zoom. O usuário poderá navegar pela barra
+                 * horizontal até o lado direito.
+                 */
+                scrollConteudoPrincipal.setHvalue(0.0);
             }
         });
+    }
+    
+    private void atualizarDimensoesConteudoZoom() {
+        if (rootComOverlayPrincipal == null
+                || painelConteudoZoom == null
+                || scrollConteudoPrincipal == null) {
+
+            return;
+        }
+
+        double fator =
+                obterFatorZoomInterface();
+
+        if (fator <= 0) {
+            fator = 1.0;
+        }
+
+        double larguraViewport =
+                scrollConteudoPrincipal
+                        .getViewportBounds()
+                        .getWidth();
+
+        double alturaViewport =
+                scrollConteudoPrincipal
+                        .getViewportBounds()
+                        .getHeight();
+
+        /*
+         * Antes da primeira exibição, o viewport pode
+         * ainda não possuir dimensões válidas.
+         */
+        if (larguraViewport <= 0) {
+            larguraViewport =
+                    scrollConteudoPrincipal.getWidth();
+        }
+
+        if (alturaViewport <= 0) {
+            alturaViewport =
+                    scrollConteudoPrincipal.getHeight();
+        }
+
+        if (larguraViewport <= 0
+                || alturaViewport <= 0) {
+
+            return;
+        }
+
+        /*
+         * Quando o zoom é maior que 100%, mantemos a largura
+         * lógica original da tela.
+         *
+         * O Scale aumentará essa largura visualmente e o
+         * ScrollPane passará a oferecer navegação horizontal.
+         *
+         * Quando o zoom é menor que 100%, ampliamos a largura
+         * lógica para continuar ocupando todo o viewport.
+         */
+        double larguraLogica;
+
+        if (fator > 1.0) {
+            larguraLogica =
+                    Math.max(
+                            1180,
+                            larguraViewport
+                    );
+        } else {
+            larguraLogica =
+                    Math.max(
+                            1180,
+                            larguraViewport / fator
+                    );
+        }
+
+        /*
+         * A altura continua ajustada ao viewport porque não
+         * queremos criar navegação vertical na tela inteira.
+         */
+        double alturaLogica =
+                Math.max(
+                        1,
+                        alturaViewport / fator
+                );
+
+        rootComOverlayPrincipal.setMinSize(
+                larguraLogica,
+                alturaLogica
+        );
+
+        rootComOverlayPrincipal.setPrefSize(
+                larguraLogica,
+                alturaLogica
+        );
+
+        rootComOverlayPrincipal.setMaxSize(
+                larguraLogica,
+                alturaLogica
+        );
+
+        rootComOverlayPrincipal.resizeRelocate(
+                0,
+                0,
+                larguraLogica,
+                alturaLogica
+        );
+
+        /*
+         * O tamanho do Pane representa o tamanho visual
+         * depois da aplicação do zoom.
+         */
+        double larguraVisual =
+                Math.ceil(
+                        larguraLogica * fator
+                );
+
+        double alturaVisual =
+                Math.ceil(
+                        alturaLogica * fator
+                );
+
+        painelConteudoZoom.setMinSize(
+                larguraVisual,
+                alturaVisual
+        );
+
+        painelConteudoZoom.setPrefSize(
+                larguraVisual,
+                alturaVisual
+        );
+
+        painelConteudoZoom.setMaxSize(
+                larguraVisual,
+                alturaVisual
+        );
+
+        painelConteudoZoom.resize(
+                larguraVisual,
+                alturaVisual
+        );
     }
     
     private int obterIndiceRodapeTabela() {
@@ -460,23 +718,31 @@ public class telaInicial extends Application {
                 .setAll(escalaInterface);
 
         /*
-         * Viewport da área que recebe zoom.
+         * O root ampliado fica dentro de um Pane de tamanho fixado
+         * manualmente.
+         *
+         * Assim o ScrollPane não precisa calcular seu tamanho através
+         * das células virtualizadas da TableView.
          */
-        /*
-         * O Group faz o ScrollPane considerar o tamanho visual
-         * do conteúdo depois da aplicação do zoom.
-         */
-        grupoConteudoZoom = new Group(
-                rootComOverlayPrincipal
+        painelConteudoZoom =
+                new Pane();
+
+        rootComOverlayPrincipal.setManaged(
+                false
         );
+
+        painelConteudoZoom
+                .getChildren()
+                .add(rootComOverlayPrincipal);
 
         /*
          * Somente o corpo da tela possui navegação.
          * O cabeçalho com logo, título e configurações permanece fixo.
          */
-        scrollConteudoPrincipal = new ScrollPane(
-                grupoConteudoZoom
-        );
+        scrollConteudoPrincipal =
+                new ScrollPane(
+                        painelConteudoZoom
+                );
 
         scrollConteudoPrincipal.setFitToWidth(false);
         scrollConteudoPrincipal.setFitToHeight(false);
@@ -502,44 +768,14 @@ public class telaInicial extends Application {
          * Acima de 100%, o tamanho mínimo natural gera a navegação
          * horizontal sem afetar o cabeçalho fixo.
          */
-        scrollConteudoPrincipal.viewportBoundsProperty().addListener(
-                (obs, valorAnterior, valorAtual) -> {
-                    double fator = obterFatorZoomInterface();
-
-                    if (fator <= 0) {
-                        fator = 1.0;
-                    }
-
-                    double larguraLogica = Math.max(
-                            1180,
-                            valorAtual.getWidth() / fator
-                    );
-
-                    double alturaLogica = Math.max(
-                            1,
-                            valorAtual.getHeight() / fator
-                    );
-
-                    rootComOverlayPrincipal.setMinSize(
-                            larguraLogica,
-                            alturaLogica
-                    );
-
-                    rootComOverlayPrincipal.setPrefSize(
-                            larguraLogica,
-                            alturaLogica
-                    );
-
-                    rootComOverlayPrincipal.setMaxSize(
-                            larguraLogica,
-                            alturaLogica
-                    );
-
-                    rootComOverlayPrincipal.resize(
-                            larguraLogica,
-                            alturaLogica
-                    );
-                }
+        scrollConteudoPrincipal
+        .viewportBoundsProperty()
+        .addListener(
+                (
+                        observavel,
+                        valorAnterior,
+                        valorAtual
+                ) -> atualizarDimensoesConteudoZoom()
         );
 
         /*
@@ -714,21 +950,122 @@ public class telaInicial extends Application {
     }
 
     private void adicionarLinhaVazia() {
-        int indiceRodape = itens.indexOf(linhaRodapeTabela);
+        /*
+         * Finaliza uma possível edição antes de alterar
+         * estruturalmente a lista da tabela.
+         */
+        if (tabela != null) {
+            tabela.edit(-1, null);
+        }
+
+        int indiceRodape =
+                itens.indexOf(linhaRodapeTabela);
 
         if (indiceRodape < 0) {
             itens.add(new ItemAnalise());
             itens.add(linhaRodapeTabela);
+        } else {
+            itens.add(
+                    indiceRodape,
+                    new ItemAnalise()
+            );
+        }
+
+        recalcularResumo();
+
+        /*
+         * Não utilizamos tabela.refresh().
+         *
+         * A ObservableList já notifica a TableView sobre
+         * a nova linha. O refresh reconstruía todas as células
+         * e podia disparar repetidamente o CSS das linhas.
+         */
+        if (tabela != null) {
+            tabela.requestLayout();
+        }
+    }
+    
+    private void removerLinhasSelecionadas() {
+        if (tabela == null) {
             return;
         }
 
-        itens.add(indiceRodape, new ItemAnalise());
+        /*
+         * Criamos uma cópia independente porque a seleção
+         * muda automaticamente conforme os itens são removidos.
+         */
+        List<ItemAnalise> selecionados =
+                new ArrayList<>(
+                        obterLinhasSelecionadasEditaveis()
+                );
+
+        selecionados.removeIf(
+                item -> item == null
+                        || isLinhaRodapeTabela(item)
+        );
+
+        if (selecionados.isEmpty()) {
+            return;
+        }
+
+        /*
+         * Encerra qualquer edição antes de modificar
+         * estruturalmente a lista.
+         */
+        tabela.edit(-1, null);
+
+        /*
+         * Remove seleção e foco antes de descartar as linhas.
+         */
+        tabela.getSelectionModel().clearSelection();
+
+        if (tabela.getFocusModel() != null) {
+            tabela.getFocusModel().focus(-1);
+        }
+
+        indiceInicioSelecaoArrastada = -1;
+        indiceLinhaFocoPendente = -1;
+        colunaFocoPendente = null;
+
+        /*
+         * A ObservableList atualiza a TableView automaticamente.
+         */
+        itens.removeAll(selecionados);
+
+        garantirRodapeNoFinal();
         recalcularResumo();
-        tabela.refresh();
+        atualizarVisibilidadeColunaOkEncalhado();
+
+        salvarEstadoTabelaAtual();
+
+        /*
+         * Não utilizar:
+         * - tabela.refresh();
+         * - Platform.runLater();
+         * - tabela.requestLayout();
+         *
+         * A alteração da ObservableList já invalida o layout.
+         */
     }
 
     private void garantirRodapeNoFinal() {
-        itens.remove(linhaRodapeTabela);
+        int indiceRodape = itens.indexOf(linhaRodapeTabela);
+
+        /*
+         * O rodapé já está corretamente no final.
+         * Não fazemos nenhuma alteração na lista.
+         */
+        if (indiceRodape == itens.size() - 1) {
+            return;
+        }
+
+        /*
+         * Caso esteja em outra posição, remove antes de recolocá-lo.
+         */
+        if (indiceRodape >= 0) {
+            itens.remove(indiceRodape);
+        }
+
         itens.add(linhaRodapeTabela);
     }
 
@@ -837,53 +1174,32 @@ public class telaInicial extends Application {
     }
 
     private void prepararDadosIniciais() {
-        estadoCombo.setItems(FXCollections.observableArrayList(
-                new EstadoInfo("SP", new BigDecimal("50.00")),
-                new EstadoInfo("SC", new BigDecimal("40.22")),
-        		new EstadoInfo("AC", new BigDecimal("50.00")),
-                new EstadoInfo("AL", new BigDecimal("50.00")),
-                new EstadoInfo("AP", new BigDecimal("50.00")),
-                new EstadoInfo("AM", new BigDecimal("50.00")),
-                new EstadoInfo("BA", new BigDecimal("50.00")),
-                new EstadoInfo("CE", new BigDecimal("50.00")),
-                new EstadoInfo("DF", new BigDecimal("50.00")),
-                new EstadoInfo("ES", new BigDecimal("50.00")),
-                new EstadoInfo("GO", new BigDecimal("50.00")),
-                new EstadoInfo("MA", new BigDecimal("50.00")),
-                new EstadoInfo("MT", new BigDecimal("50.00")),
-                new EstadoInfo("MS", new BigDecimal("50.00")),
-                new EstadoInfo("MG", new BigDecimal("50.00")),
-                new EstadoInfo("PA", new BigDecimal("50.00")),
-                new EstadoInfo("PB", new BigDecimal("50.00")),
-                new EstadoInfo("PR", new BigDecimal("50.00")),
-                new EstadoInfo("PE", new BigDecimal("50.00")),
-                new EstadoInfo("PI", new BigDecimal("50.00")),
-                new EstadoInfo("RJ", new BigDecimal("50.00")),
-                new EstadoInfo("RN", new BigDecimal("50.00")),
-                new EstadoInfo("RS", new BigDecimal("50.00")),
-                new EstadoInfo("RO", new BigDecimal("50.00")),
-                new EstadoInfo("RR", new BigDecimal("50.00")),
-                new EstadoInfo("SE", new BigDecimal("50.00")),
-                new EstadoInfo("TO", new BigDecimal("50.00"))
-        ));
-        estadoCombo.getSelectionModel().select(
-                estadoCombo.getItems().stream()
-                        .filter(estado -> "SP".equals(estado.getSigla()))
-                        .findFirst()
-                        .orElse(estadoCombo.getItems().get(0))
-        );
+    /*
+     * Recarrega explicitamente para garantir que os estados
+     * venham do arquivo de configurações.
+     */
+    configuracaoUsuario =
+            configuracaoUsuarioService.carregar();
 
-        estadoCombo.valueProperty().addListener((obs, oldValue, newValue) -> {
-            atualizarBaseEstado();
-            recalcularTudoAposAlterarEstado();
-        });
-        
-        atualizarBaseEstado();
+    estadoCombo.valueProperty().addListener(
+            (obs, oldValue, newValue) -> {
+                if (atualizandoListaEstadosProgramaticamente) {
+                    return;
+                }
 
-        carregarEstadoTabelaPersistidoOuPadrao();
+                atualizarBaseEstado();
+                recalcularTudoAposAlterarEstado();
+            }
+    );
 
-        recalcularResumo();
-    }
+    carregarEstadosConfigurados("SP");
+
+    atualizarBaseEstado();
+
+    carregarEstadoTabelaPersistidoOuPadrao();
+
+    recalcularResumo();
+}
 
     private void carregarEstadoTabelaPersistidoOuPadrao() {
         itens.clear();
@@ -944,11 +1260,35 @@ public class telaInicial extends Application {
     }
 
     private void atualizarTextoUltimaAtualizacao() {
-        LocalDateTime agora = LocalDateTime.now();
+        atualizarTextoUltimaAtualizacao(null);
+    }
+
+    private void atualizarTextoUltimaAtualizacao(
+            ResultadoSincronizacao resultadoSincronizacao
+    ) {
+        LocalDateTime agora =
+                LocalDateTime.now();
+
+        boolean usandoCopiaLocal =
+                resultadoSincronizacao != null
+                        && resultadoSincronizacao
+                                .quantidadeFallbackLocal() > 0;
+
+        String complemento =
+                usandoCopiaLocal
+                        ? " (cópia local)"
+                        : "";
 
         ultimaAtualizacaoLabel.setText(
-                "Última atualização: " + agora.format(FORMATADOR_DATA_ATUALIZACAO)
-                        + "\nàs " + agora.format(FORMATADOR_HORA_ATUALIZACAO)
+                "Última atualização: "
+                        + agora.format(
+                                FORMATADOR_DATA_ATUALIZACAO
+                        )
+                        + "\nàs "
+                        + agora.format(
+                                FORMATADOR_HORA_ATUALIZACAO
+                        )
+                        + complemento
         );
     }
     
@@ -956,22 +1296,33 @@ public class telaInicial extends Application {
         atualizarDados(true);
     }
 
-    private void atualizarDados(boolean mostrarAvisoConclusao) {
-    	if (atualizacaoDadosEmAndamento) {
-    	    return;
-    	}
+    private void atualizarDados(
+            boolean mostrarAvisoConclusao
+    ) {
+        /*
+         * Impede clique duplo, atualização automática simultânea
+         * ou atualização durante o pré-carregamento inicial.
+         */
+        if (atualizacaoDadosEmAndamento) {
+            return;
+        }
 
-    	atualizacaoDadosEmAndamento = true;
-    	mostrarOverlayAtualizacao(true);
-        long inicioAtualizacaoMs = System.currentTimeMillis();
-        long tempoMinimoExibicaoMs = sortearTempoMinimoAtualizacaoMs();
-        
+        atualizacaoDadosEmAndamento = true;
 
-        List<Integer> indices = new ArrayList<>();
-        List<String> codigos = new ArrayList<>();
+        prepararOverlayAtualizacao(
+                "Atualizando dados...",
+                "Preparando sincronização das bases."
+        );
+
+        List<Integer> indices =
+                new ArrayList<>();
+
+        List<String> codigos =
+                new ArrayList<>();
 
         for (int i = 0; i < itens.size(); i++) {
-            ItemAnalise item = itens.get(i);
+            ItemAnalise item =
+                    itens.get(i);
 
             if (isLinhaRodapeTabela(item)) {
                 continue;
@@ -985,84 +1336,165 @@ public class telaInicial extends Application {
             codigos.add(item.getCodigo());
         }
 
-        Task<List<AtualizacaoLinha>> tarefa = new Task<>() {
-            @Override
-            protected List<AtualizacaoLinha> call() throws Exception {
-                itemService.recarregarBases();
+        Task<ResultadoAtualizacaoDados> tarefa =
+                new Task<>() {
 
-                List<AtualizacaoLinha> atualizacoes = new ArrayList<>();
+            @Override
+            protected ResultadoAtualizacaoDados call()
+                    throws Exception {
+
+                ResultadoSincronizacao resultadoSincronizacao =
+                        itemService.recarregarBases(
+                                (
+                                        atual,
+                                        total,
+                                        base,
+                                        etapa
+                                ) -> atualizarOverlaySincronizacao(
+                                        atual,
+                                        total,
+                                        base.getNomeArquivo(),
+                                        etapa
+                                )
+                        );
+
+                atualizarOverlayAtualizacao(
+                        "Atualizando dados...",
+                        codigos.isEmpty()
+                                ? "Finalizando atualização."
+                                : "Consultando "
+                                        + codigos.size()
+                                        + (
+                                        codigos.size() == 1
+                                                ? " item da tabela."
+                                                : " itens da tabela."
+                                ),
+                        ProgressIndicator.INDETERMINATE_PROGRESS
+                );
+
+                List<AtualizacaoLinha> atualizacoes =
+                        new ArrayList<>();
 
                 for (int i = 0; i < codigos.size(); i++) {
-                    String codigo = codigos.get(i);
-                    int indiceLinha = indices.get(i);
+                    String codigo =
+                            codigos.get(i);
 
-                    DadosItem dadosItem = itemService.buscarPorCodigo(codigo).orElse(null);
-                    atualizacoes.add(new AtualizacaoLinha(indiceLinha, dadosItem));
+                    int indiceLinha =
+                            indices.get(i);
+
+                    DadosItem dadosItem =
+                            itemService
+                                    .buscarPorCodigo(codigo)
+                                    .orElse(null);
+
+                    atualizacoes.add(
+                            new AtualizacaoLinha(
+                                    indiceLinha,
+                                    dadosItem
+                            )
+                    );
                 }
 
-                aguardarTempoMinimo(inicioAtualizacaoMs, tempoMinimoExibicaoMs);
-
-                return atualizacoes;
+                return new ResultadoAtualizacaoDados(
+                        atualizacoes,
+                        resultadoSincronizacao
+                );
             }
         };
 
         tarefa.setOnSucceeded(event -> {
-            List<AtualizacaoLinha> atualizacoes = tarefa.getValue();
+            ResultadoAtualizacaoDados resultadoTarefa =
+                    tarefa.getValue();
 
-            for (AtualizacaoLinha atualizacao : atualizacoes) {
-                int indice = atualizacao.indiceLinha();
+            List<AtualizacaoLinha> atualizacoes =
+                    resultadoTarefa == null
+                            ? List.of()
+                            : resultadoTarefa.atualizacoes();
 
-                if (indice < 0 || indice >= itens.size()) {
+            ResultadoSincronizacao resultadoSincronizacao =
+                    resultadoTarefa == null
+                            ? null
+                            : resultadoTarefa.sincronizacao();
+
+            for (
+                    AtualizacaoLinha atualizacao
+                    : atualizacoes
+            ) {
+                int indice =
+                        atualizacao.indiceLinha();
+
+                if (indice < 0
+                        || indice >= itens.size()) {
+
                     continue;
                 }
 
-                ItemAnalise item = itens.get(indice);
+                ItemAnalise item =
+                        itens.get(indice);
 
                 if (isLinhaRodapeTabela(item)) {
                     continue;
                 }
 
-                item.aplicarDadosItem(atualizacao.dadosItem());
+                item.aplicarDadosItem(
+                        atualizacao.dadosItem()
+                );
+
                 recalcularItem(item);
-                atualizarVisibilidadeColunaOkEncalhado();
             }
 
             recalcularResumo();
-            atualizarVisibilidadeColunaOkEncalhado();atualizarVisibilidadeColunaOkEncalhado();
+            atualizarVisibilidadeColunaOkEncalhado();
+
             tabela.refresh();
-            atualizarTextoUltimaAtualizacao();
+
+            atualizarTextoUltimaAtualizacao(
+                    resultadoSincronizacao
+            );
+
             mostrarOverlayAtualizacao(false);
             atualizacaoDadosEmAndamento = false;
 
             if (mostrarAvisoConclusao) {
                 mostrarAviso(
                         "Atualização concluída",
-                        "As bases foram recarregadas e os itens da tabela foram atualizados."
+                        criarMensagemConclusaoAtualizacao(
+                                resultadoSincronizacao
+                        )
                 );
             }
         });
 
         tarefa.setOnFailed(event -> {
-            Throwable erro = tarefa.getException();
+            Throwable erro =
+                    tarefa.getException();
 
             mostrarOverlayAtualizacao(false);
             atualizacaoDadosEmAndamento = false;
 
             if (mostrarAvisoConclusao) {
                 mostrarErro(
-                        "Atualização de dados > recarregar bases e consultar itens preenchidos",
+                        "Atualização de dados > sincronizar "
+                                + "bases e consultar itens",
                         erro
                 );
+
             } else if (erro != null) {
                 erro.printStackTrace();
             }
         });
+
         tarefa.setOnCancelled(event -> {
             mostrarOverlayAtualizacao(false);
             atualizacaoDadosEmAndamento = false;
         });
 
-        Thread thread = new Thread(tarefa, "AtualizacaoDadosThread");
+        Thread thread =
+                new Thread(
+                        tarefa,
+                        "AtualizacaoDadosThread"
+                );
+
         thread.setDaemon(true);
         thread.start();
     }
@@ -1191,6 +1623,36 @@ public class telaInicial extends Application {
                         estadoCombo,
                         baseEstadoLabel
                 );
+        
+        linhaCotacaoDolar =
+                criarLinhaCotacaoDolar();
+
+        linhaFatorImportacao =
+                criarLinhaFatorImportacao();
+
+        VBox estadoECotacaoBox =
+                new VBox(
+                        4,
+                        estadoBaseTabela,
+                        linhaCotacaoDolar,
+                        linhaFatorImportacao
+                );
+
+        estadoECotacaoBox.setAlignment(
+                Pos.TOP_LEFT
+        );
+
+        /*
+         * A MiniTabelaEstadoBase possui:
+         *
+         * Estado: 82 px
+         * Base:   230 px
+         *
+         * Total:  312 px
+         */
+        estadoECotacaoBox.setMinWidth(312);
+        estadoECotacaoBox.setPrefWidth(312);
+        estadoECotacaoBox.setMaxWidth(312);
 
         Button valorPadraoButton =
                 new Button("BUSCAR VALOR PADRÃO");
@@ -1233,7 +1695,7 @@ public class telaInicial extends Application {
 
         comandos.getChildren().addAll(
                 atualizarBox,
-                estadoBaseTabela,
+                estadoECotacaoBox,
                 valorPadraoButton,
                 spacer,
                 resumo
@@ -1242,6 +1704,480 @@ public class telaInicial extends Application {
         topo.getChildren().add(comandos);
 
         return topo;
+    }
+    
+    private HBox criarLinhaFatorImportacao() {
+        Label rotuloFator =
+                new Label("FATOR IMP.:");
+
+        /*
+         * Reutilizamos as mesmas classes CSS
+         * do dólar para manter o desenho idêntico.
+         */
+        rotuloFator
+                .getStyleClass()
+                .add("rotulo-cotacao-dolar");
+
+        rotuloFator.setAlignment(
+                Pos.CENTER
+        );
+
+        rotuloFator.setMinWidth(120);
+        rotuloFator.setPrefWidth(120);
+        rotuloFator.setMaxWidth(120);
+
+        campoFatorImportacao =
+                new TextField();
+
+        campoFatorImportacao
+                .getStyleClass()
+                .add("campo-cotacao-dolar");
+
+        campoFatorImportacao.setAlignment(
+                Pos.CENTER
+        );
+
+        campoFatorImportacao.setMinWidth(0);
+
+        campoFatorImportacao.setMaxWidth(
+                Double.MAX_VALUE
+        );
+
+        /*
+         * Exemplos aceitos:
+         *
+         * 0
+         * 0,00
+         * 0.00
+         * 12,50
+         *
+         * Não permite números negativos.
+         */
+        UnaryOperator<TextFormatter.Change>
+                filtroFator =
+                alteracao -> {
+
+                    String novoTexto =
+                            alteracao
+                                    .getControlNewText();
+
+                    if (novoTexto.matches(
+                            "\\d{0,4}([,.]\\d{0,2})?"
+                    )) {
+                        return alteracao;
+                    }
+
+                    return null;
+                };
+
+        campoFatorImportacao.setTextFormatter(
+                new TextFormatter<>(
+                        filtroFator
+                )
+        );
+
+        /*
+         * Carrega o valor salvo antes
+         * de instalar os listeners.
+         */
+        atualizarCampoFatorImportacao();
+
+        campoFatorImportacao
+                .textProperty()
+                .addListener(
+                        (
+                                observavel,
+                                textoAnterior,
+                                textoNovo
+                        ) ->
+                                persistirFatorImportacao(
+                                        textoNovo
+                                )
+                );
+
+        /*
+         * Ao perder o foco, mostra sempre
+         * duas casas decimais.
+         */
+        campoFatorImportacao
+                .focusedProperty()
+                .addListener(
+                        (
+                                observavel,
+                                estavaFocado,
+                                estaFocado
+                        ) -> {
+
+                            if (!estaFocado) {
+                                atualizarCampoFatorImportacao();
+                            }
+                        }
+                );
+
+        campoFatorImportacao.setOnAction(
+                evento -> {
+                    atualizarCampoFatorImportacao();
+
+                    if (tabela != null) {
+                        tabela.requestFocus();
+                    }
+                }
+        );
+
+        HBox linha =
+                new HBox(
+                        0,
+                        rotuloFator,
+                        campoFatorImportacao
+                );
+
+        linha.getStyleClass()
+                .add("bloco-cotacao-dolar");
+
+        linha.setAlignment(
+                Pos.CENTER_LEFT
+        );
+
+        /*
+         * Mesma largura da tabela
+         * Estado/Base e da linha do dólar.
+         */
+        linha.setMinWidth(312);
+        linha.setPrefWidth(312);
+        linha.setMaxWidth(312);
+
+        linha.setMinHeight(32);
+        linha.setPrefHeight(32);
+        linha.setMaxHeight(32);
+
+        HBox.setHgrow(
+                campoFatorImportacao,
+                Priority.ALWAYS
+        );
+
+        boolean deveMostrar =
+                configuracaoUsuario != null
+                        && configuracaoUsuario
+                                .isCustoFuturo();
+
+        linha.setVisible(
+                deveMostrar
+        );
+
+        linha.setManaged(
+                deveMostrar
+        );
+
+        return linha;
+    }
+    
+    private void persistirFatorImportacao(
+            String texto
+    ) {
+        if (configuracaoUsuario == null) {
+            configuracaoUsuario =
+                    new ConfiguracaoUsuario();
+        }
+
+        /*
+         * Campo apagado:
+         * remove também o valor da configuração.
+         */
+        if (texto == null
+                || texto.isBlank()) {
+
+            if (configuracaoUsuario
+                    .getFatorImportacaoReposicao()
+                    == null) {
+
+                return;
+            }
+
+            configuracaoUsuario
+                    .setFatorImportacaoReposicao(
+                            null
+                    );
+
+            configuracaoUsuarioService.salvar(
+                    configuracaoUsuario
+            );
+
+            return;
+        }
+
+        BigDecimal novoFator =
+                converterTextoFatorImportacao(
+                        texto
+                );
+
+        if (novoFator == null) {
+            return;
+        }
+
+        BigDecimal fatorAtual =
+                configuracaoUsuario
+                        .getFatorImportacaoReposicao();
+
+        /*
+         * Evita gravações repetidas.
+         */
+        if (fatorAtual != null
+                && fatorAtual.compareTo(
+                        novoFator
+                ) == 0) {
+
+            return;
+        }
+
+        configuracaoUsuario
+                .setFatorImportacaoReposicao(
+                        novoFator
+                );
+
+        configuracaoUsuarioService.salvar(
+                configuracaoUsuario
+        );
+    }
+
+    private BigDecimal converterTextoFatorImportacao(
+            String texto
+    ) {
+        if (texto == null
+                || texto.isBlank()) {
+
+            return null;
+        }
+
+        try {
+            String textoNormalizado =
+                    texto.trim()
+                            .replace(',', '.');
+
+            /*
+             * Permite digitação temporária como:
+             *
+             * 0,
+             * 5.
+             */
+            if (textoNormalizado.endsWith(".")) {
+                textoNormalizado += "0";
+            }
+
+            BigDecimal valor =
+                    new BigDecimal(
+                            textoNormalizado
+                    );
+
+            /*
+             * Zero é válido.
+             * Apenas negativos seriam rejeitados.
+             */
+            if (valor.compareTo(
+                    BigDecimal.ZERO
+            ) < 0) {
+
+                return null;
+            }
+
+            return valor.setScale(
+                    2,
+                    RoundingMode.HALF_UP
+            );
+
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private void atualizarCampoFatorImportacao() {
+        if (campoFatorImportacao == null) {
+            return;
+        }
+
+        BigDecimal fator =
+                configuracaoUsuario == null
+                        ? null
+                        : configuracaoUsuario
+                                .getFatorImportacaoReposicao();
+
+        String textoFormatado;
+
+        if (fator == null) {
+            textoFormatado = "";
+
+        } else {
+            textoFormatado =
+                    fator.setScale(
+                            2,
+                            RoundingMode.HALF_UP
+                    )
+                            .toPlainString()
+                            .replace('.', ',');
+        }
+
+        if (!textoFormatado.equals(
+                campoFatorImportacao.getText()
+        )) {
+            campoFatorImportacao.setText(
+                    textoFormatado
+            );
+        }
+    }
+    
+    private HBox criarLinhaCotacaoDolar() {
+        Label rotuloDolar =
+                new Label("DÓLAR:");
+
+        rotuloDolar
+                .getStyleClass()
+                .add("rotulo-cotacao-dolar");
+
+        rotuloDolar.setAlignment(
+                Pos.CENTER
+        );
+
+        rotuloDolar.setMinWidth(120);
+        rotuloDolar.setPrefWidth(120);
+        rotuloDolar.setMaxWidth(120);
+
+        campoCotacaoDolar =
+                new TextField();
+
+        campoCotacaoDolar
+                .getStyleClass()
+                .add("campo-cotacao-dolar");
+
+        campoCotacaoDolar.setAlignment(
+                Pos.CENTER
+        );
+
+        campoCotacaoDolar.setMinWidth(0);
+        campoCotacaoDolar.setMaxWidth(
+                Double.MAX_VALUE
+        );
+
+        /*
+         * Aceita, por exemplo:
+         *
+         * 5
+         * 5,30
+         * 5.30
+         */
+        UnaryOperator<TextFormatter.Change>
+                filtroCotacao =
+                alteracao -> {
+
+                    String novoTexto =
+                            alteracao
+                                    .getControlNewText();
+
+                    if (novoTexto.matches(
+                            "\\d{0,4}([,.]\\d{0,2})?"
+                    )) {
+                        return alteracao;
+                    }
+
+                    return null;
+                };
+
+        campoCotacaoDolar.setTextFormatter(
+                new TextFormatter<>(
+                        filtroCotacao
+                )
+        );
+
+        /*
+         * Carrega o valor persistido antes
+         * de instalar o listener.
+         */
+        atualizarCampoCotacaoDolar();
+
+        campoCotacaoDolar
+                .textProperty()
+                .addListener(
+                        (
+                                observavel,
+                                textoAnterior,
+                                textoNovo
+                        ) ->
+                                persistirCotacaoDolarSeValida(
+                                        textoNovo
+                                )
+                );
+
+        /*
+         * Ao sair do campo, normaliza para
+         * duas casas decimais.
+         */
+        campoCotacaoDolar
+                .focusedProperty()
+                .addListener(
+                        (
+                                observavel,
+                                estavaFocado,
+                                estaFocado
+                        ) -> {
+
+                            if (!estaFocado) {
+                                atualizarCampoCotacaoDolar();
+                            }
+                        }
+                );
+
+        campoCotacaoDolar.setOnAction(
+                evento -> {
+                    atualizarCampoCotacaoDolar();
+
+                    if (tabela != null) {
+                        tabela.requestFocus();
+                    }
+                }
+        );
+
+        HBox linha =
+                new HBox(
+                        0,
+                        rotuloDolar,
+                        campoCotacaoDolar
+                );
+
+        linha.getStyleClass()
+                .add("bloco-cotacao-dolar");
+
+        linha.setAlignment(
+                Pos.CENTER_LEFT
+        );
+
+        /*
+         * Mesma largura da MiniTabelaEstadoBase.
+         */
+        linha.setMinWidth(312);
+        linha.setPrefWidth(312);
+        linha.setMaxWidth(312);
+
+        linha.setMinHeight(32);
+        linha.setPrefHeight(32);
+        linha.setMaxHeight(32);
+
+        HBox.setHgrow(
+                campoCotacaoDolar,
+                Priority.ALWAYS
+        );
+
+        boolean deveMostrar =
+                configuracaoUsuario != null
+                        && configuracaoUsuario
+                                .isCustoFuturo();
+
+        linha.setVisible(
+                deveMostrar
+        );
+
+        linha.setManaged(
+                deveMostrar
+        );
+
+        return linha;
     }
         
     private boolean cliqueFoiDentroDoNo(Node alvo, Node noPai) {
@@ -1376,6 +2312,55 @@ public class telaInicial extends Application {
         tabela.setSortPolicy(this::ordenarTabelaMantendoRodape);
         tabela.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         
+        TableColumn<ItemAnalise, ItemAnalise> numeroLinhaCol =
+                new TableColumn<>("");
+
+        numeroLinhaCol.setId("numero_linha");
+        numeroLinhaCol.setSortable(false);
+        numeroLinhaCol.setReorderable(false);
+        numeroLinhaCol.setResizable(false);
+
+        numeroLinhaCol.setMinWidth(42);
+        numeroLinhaCol.setPrefWidth(42);
+        numeroLinhaCol.setMaxWidth(42);
+
+        numeroLinhaCol.setCellValueFactory(data ->
+                new ReadOnlyObjectWrapper<>(
+                        data.getValue()
+                )
+        );
+
+        numeroLinhaCol.setCellFactory(coluna ->
+                new TableCell<>() {
+
+                    @Override
+                    protected void updateItem(
+                            ItemAnalise itemLinha,
+                            boolean empty
+                    ) {
+                        super.updateItem(itemLinha, empty);
+
+                        int indice = getIndex();
+
+                        if (empty
+                                || indice < 0
+                                || itemLinha == null
+                                || isLinhaRodapeTabela(itemLinha)) {
+
+                            setText("");
+                            setGraphic(null);
+                            return;
+                        }
+
+                        setText(
+                                String.valueOf(indice + 1)
+                        );
+
+                        setGraphic(null);
+                        setAlignment(Pos.CENTER);
+                    }
+                }
+        );
         
         TableColumn<ItemAnalise, String> codigoCol = new TableColumn<>("CÓDIGO");
         codigoCol.setCellValueFactory(data -> data.getValue().codigoProperty());
@@ -1467,6 +2452,138 @@ public class telaInicial extends Application {
         custoVerdadeiroCol.setCellFactory(col -> new CustoTableCell());
         custoVerdadeiroCol.getStyleClass().add("coluna-cinza");
         custoVerdadeiroCol.setPrefWidth(105);
+        
+        /*
+         * Coluna com o valor do custo que será
+         * utilizado para reposição.
+         */
+        TableColumn<ItemAnalise, BigDecimal>
+                custoReposicaoCol =
+                new TableColumn<>("CUSTO");
+
+        custoReposicaoCol.setCellValueFactory(
+                data ->
+                        data.getValue()
+                                .custoReposicaoProperty()
+        );
+
+        custoReposicaoCol.setCellFactory(
+                coluna ->
+                        new CustoReposicaoTableCell()
+        );
+
+        custoReposicaoCol
+                .getStyleClass()
+                .add("coluna-verde");
+
+        custoReposicaoCol.setPrefWidth(115);
+
+
+        /*
+         * Processo de importação responsável
+         * pela reposição futura.
+         */
+        TableColumn<ItemAnalise, String>
+                processoReposicaoCol =
+                new TableColumn<>("PROCESSO");
+
+        processoReposicaoCol.setCellValueFactory(
+                data ->
+                        data.getValue()
+                                .processoReposicaoProperty()
+        );
+
+        processoReposicaoCol.setCellFactory(
+                coluna ->
+                        new TableCell<>() {
+
+                            @Override
+                            protected void updateItem(
+                                    String processo,
+                                    boolean empty
+                            ) {
+                                super.updateItem(
+                                        processo,
+                                        empty
+                                );
+
+                                ItemAnalise itemLinha =
+                                        getTableRow() == null
+                                                ? null
+                                                : getTableRow()
+                                                        .getItem();
+
+                                if (empty
+                                        || isLinhaRodapeTabela(
+                                                itemLinha
+                                        )
+                                        || !temCodigoPreenchido(
+                                                itemLinha
+                                        )) {
+
+                                    setText("");
+                                    setStyle("");
+                                    return;
+                                }
+
+                                setText(
+                                        processo == null
+                                                ? ""
+                                                : processo
+                                );
+
+                                setAlignment(
+                                        Pos.CENTER
+                                );
+
+                                setStyle("");
+                            }
+                        }
+        );
+
+        processoReposicaoCol
+                .getStyleClass()
+                .add("coluna-verde");
+
+        processoReposicaoCol.setPrefWidth(125);
+
+
+        /*
+         * Grupo visível apenas quando a opção
+         * Custo Reposição estiver habilitada.
+         */
+        custoReposicaoGrupoCol =
+                new TableColumn<>(
+                        "CUSTO REPOSIÇÃO"
+                );
+
+        custoReposicaoGrupoCol
+                .getColumns()
+                .addAll(
+                        custoReposicaoCol,
+                        processoReposicaoCol
+                );
+
+        custoReposicaoGrupoCol
+                .getStyleClass()
+                .add("grupo-verde");
+
+
+        /*
+         * Identificadores utilizados para salvar
+         * ordem e largura das colunas.
+         */
+        custoReposicaoGrupoCol.setId(
+                "custo_reposicao"
+        );
+
+        custoReposicaoCol.setId(
+                "custo_reposicao_custo"
+        );
+
+        processoReposicaoCol.setId(
+                "custo_reposicao_processo"
+        );
 
         TableColumn<ItemAnalise, LocalDate> dataCustoVerdadeiroCol = new TableColumn<>("DATA CUSTO");
         dataCustoVerdadeiroCol.setCellValueFactory(data -> data.getValue().dataCustoVerdadeiroProperty());
@@ -1586,6 +2703,7 @@ public class telaInicial extends Application {
         );
 
         tabela.getColumns().addAll(
+                numeroLinhaCol,
                 codigoCol,
                 descricaoCol,
                 quantidadeCol,
@@ -1594,11 +2712,13 @@ public class telaInicial extends Application {
                 okEncalhadoCol,
                 baseAtualGrupo,
                 custoVerdadeiroGrupoCol,
+                custoReposicaoGrupoCol,
                 basePromobGrupo,
                 analiseAnteriorGrupo
         );
         
         registrarOrdemPadraoColunasTabela(
+                numeroLinhaCol,
                 codigoCol,
                 descricaoCol,
                 quantidadeCol,
@@ -1607,34 +2727,40 @@ public class telaInicial extends Application {
                 okEncalhadoCol,
                 baseAtualGrupo,
                 custoVerdadeiroGrupoCol,
+                custoReposicaoGrupoCol,
                 basePromobGrupo,
                 analiseAnteriorGrupo
         );
         
         aplicarLayoutPersistidoTabela();
+        tabela.getColumns().remove(numeroLinhaCol);
+        tabela.getColumns().add(0, numeroLinhaCol);
         registrarListenersPersistenciaLayoutTabela();
         
         atualizarVisibilidadeColunaCustoVerdadeiro();
+        atualizarVisibilidadeColunaCustoReposicao();
 
         tabela.setRowFactory(tv -> {
         	TableRow<ItemAnalise> row = new TableRow<>() {
-        	    @Override
-        	    protected void updateItem(ItemAnalise item, boolean empty) {
-        	        super.updateItem(item, empty);
+        		@Override
+        		protected void updateItem(
+        		        ItemAnalise item,
+        		        boolean empty
+        		) {
+        		    super.updateItem(item, empty);
 
-        	        getStyleClass().remove("linha-rodape-tabela");
+        		    boolean linhaRodape =
+        		            !empty
+        		                    && item != null
+        		                    && isLinhaRodapeTabela(item);
+        		    
+        		    pseudoClassStateChanged(
+        		            PSEUDO_LINHA_RODAPE_TABELA,
+        		            linhaRodape
+        		    );
 
-        	        if (!empty && isLinhaRodapeTabela(item)) {
-        	            getStyleClass().add("linha-rodape-tabela");
-        	        }
-
-        	        atualizarPseudoClassesLinha(this);
-        	    }
-        	};
-            
-            row.selectedProperty().addListener((obs, estavaSelecionada, estaSelecionada) -> {
-                atualizarEstiloCondicaoLinha(row);
-            });
+        		    atualizarPseudoClassesLinha(this);
+        		}};
 
             row.setOnMousePressed(event -> {
                 if (event.getButton() != MouseButton.PRIMARY) {
@@ -1748,42 +2874,120 @@ public class telaInicial extends Application {
             colunas.add(indiceDestino, colunaMover);
         }
     }
-    
-    private boolean colunaRecebeCorCondicao(TableColumn<?, ?> coluna) {
-        if (coluna == null) {
-            return false;
-        }
 
-        String nomeColuna = coluna.getText();
-
-        return COLUNA_CODIGO.equals(nomeColuna)
-                || "DESCRIÇÃO".equals(nomeColuna)
-                || COLUNA_QUANTIDADE.equals(nomeColuna)
-                || COLUNA_VALOR_UNITARIO.equals(nomeColuna)
-                || "VALOR TOTAL".equals(nomeColuna);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void atualizarEstiloCondicaoLinha(TableRow<ItemAnalise> row) {
-        if (row == null || row.getItem() == null || isLinhaRodapeTabela(row.getItem())) {
+    private void atualizarEstiloCondicaoLinha(
+            TableRow<ItemAnalise> row
+    ) {
+        if (row == null) {
             return;
         }
 
         ItemAnalise item = row.getItem();
 
-        Platform.runLater(() -> {
-            for (Node node : row.lookupAll(".table-cell")) {
-                if (!(node instanceof TableCell<?, ?> cell)) {
-                    continue;
-                }
+        /*
+         * Linhas vazias, o TOTAL e itens obsoletos não recebem
+         * a cor da condição.
+         *
+         * O destaque de item obsoleto continua tendo prioridade.
+         */
+        if (row.isEmpty()
+                || item == null
+                || isLinhaRodapeTabela(item)
+                || deveDestacarItemEncalhado(item)) {
 
-                if (!colunaRecebeCorCondicao(cell.getTableColumn())) {
-                    continue;
-                }
+            limparEstiloCondicaoLinha(row);
+            return;
+        }
 
-                aplicarEstiloCondicao((TableCell<ItemAnalise, ?>) cell, item);
-            }
-        });
+        CondicaoVenda condicao =
+                item.getCondicaoVenda();
+
+        if (condicao == null
+                || condicao == CondicaoVenda.NORMAL) {
+
+            limparEstiloCondicaoLinha(row);
+            return;
+        }
+
+        String corFundo;
+        String corTexto;
+
+        if (condicao == CondicaoVenda.ESPECIAL) {
+            corFundo =
+                    item.getCorEspecialFundo();
+
+            corTexto =
+                    item.getCorEspecialTexto();
+        } else {
+            corFundo =
+                    condicao.getCorFundo();
+
+            corTexto =
+                    condicao.getCorTexto();
+        }
+
+        if (corFundo == null
+                || corFundo.isBlank()) {
+
+            limparEstiloCondicaoLinha(row);
+            return;
+        }
+
+        if (corTexto == null
+                || corTexto.isBlank()) {
+
+            corTexto = "#000000";
+        }
+
+        /*
+         * Essas duas propriedades serão lidas pelo CSS
+         * da própria linha e de todas as células filhas.
+         */
+        String novoEstilo =
+                "-cor-condicao-fundo: "
+                        + corFundo
+                        + ";"
+                        + "-cor-condicao-texto: "
+                        + corTexto
+                        + ";";
+
+        if (!novoEstilo.equals(row.getStyle())) {
+            row.setStyle(novoEstilo);
+        }
+
+        if (!row.getPseudoClassStates().contains(
+                PSEUDO_CONDICAO_COLORIDA
+        )) {
+            row.pseudoClassStateChanged(
+                    PSEUDO_CONDICAO_COLORIDA,
+                    true
+            );
+        }
+    }
+    
+    private void limparEstiloCondicaoLinha(
+            TableRow<ItemAnalise> row
+    ) {
+        if (row == null) {
+            return;
+        }
+
+        if (row.getPseudoClassStates().contains(
+                PSEUDO_CONDICAO_COLORIDA
+        )) {
+            row.pseudoClassStateChanged(
+                    PSEUDO_CONDICAO_COLORIDA,
+                    false
+            );
+        }
+
+        String estiloAtual = row.getStyle();
+
+        if (estiloAtual != null
+                && !estiloAtual.isBlank()) {
+
+            row.setStyle("");
+        }
     }
     
     private URL localizarRecurso(String caminhoRelativo) {
@@ -1888,6 +3092,40 @@ public class telaInicial extends Application {
 
         custoVerdadeiroGrupoCol.setVisible(deveMostrar);
     }
+    
+    private void
+    atualizarVisibilidadeColunaCustoReposicao() {
+        boolean deveMostrar =
+                configuracaoUsuario != null
+                        && configuracaoUsuario
+                                .isCustoFuturo();
+
+        if (custoReposicaoGrupoCol != null) {
+            custoReposicaoGrupoCol.setVisible(
+                    deveMostrar
+            );
+        }
+
+        if (linhaCotacaoDolar != null) {
+            linhaCotacaoDolar.setVisible(
+                    deveMostrar
+            );
+
+            linhaCotacaoDolar.setManaged(
+                    deveMostrar
+            );
+        }
+
+        if (linhaFatorImportacao != null) {
+            linhaFatorImportacao.setVisible(
+                    deveMostrar
+            );
+
+            linhaFatorImportacao.setManaged(
+                    deveMostrar
+            );
+        }
+    }
 
     private void atualizarVisibilidadeColunaOkEncalhado() {
         if (okEncalhadoCol == null) {
@@ -1921,21 +3159,70 @@ public class telaInicial extends Application {
             return;
         }
 
-        List<LayoutColunaTabela> layout = layoutTabelaService.carregarLayoutColunasTabelaInicial();
+        List<LayoutColunaTabela> layout =
+                layoutTabelaService
+                        .carregarLayoutColunasTabelaInicial();
 
         if (layout == null || layout.isEmpty()) {
             return;
         }
 
+        /*
+         * Layouts salvos antes da criação do Custo Reposição
+         * ainda não possuem essa coluna registrada.
+         */
+        boolean layoutPossuiCustoReposicao =
+                layout.stream()
+                        .filter(Objects::nonNull)
+                        .map(
+                                LayoutColunaTabela::getIdColuna
+                        )
+                        .filter(Objects::nonNull)
+                        .anyMatch(
+                                "custo_reposicao"::equals
+                        );
+
         aplicandoLayoutTabela = true;
 
         try {
-            aplicarOrdemLayoutNasColunas(tabela.getColumns(), null, layout);
+            aplicarOrdemLayoutNasColunas(
+                    tabela.getColumns(),
+                    null,
+                    layout
+            );
 
-            posicionarColunaDepoisDe(tabela.getColumns(), "ok_encalhado", "valor_total");
-            posicionarColunaDepoisDe(tabela.getColumns(), "custo_verdadeiro", "base_atual");
+            posicionarColunaDepoisDe(
+                    tabela.getColumns(),
+                    "ok_encalhado",
+                    "valor_total"
+            );
 
-            aplicarLargurasLayoutNasColunas(tabela.getColumns(), layout);
+            posicionarColunaDepoisDe(
+                    tabela.getColumns(),
+                    "custo_verdadeiro",
+                    "base_atual"
+            );
+
+            /*
+             * Só define a posição inicial quando o layout salvo
+             * é antigo e ainda não conhece essa coluna.
+             *
+             * Depois que ela estiver registrada, a ordem escolhida
+             * pelo usuário será respeitada.
+             */
+            if (!layoutPossuiCustoReposicao) {
+                posicionarColunaDepoisDe(
+                        tabela.getColumns(),
+                        "custo_reposicao",
+                        "custo_verdadeiro"
+                );
+            }
+
+            aplicarLargurasLayoutNasColunas(
+                    tabela.getColumns(),
+                    layout
+            );
+
         } finally {
             aplicandoLayoutTabela = false;
         }
@@ -2191,50 +3478,178 @@ public class telaInicial extends Application {
 
         tabela.getColumns().setAll(ordemPadraoColunasTabela);
         posicionarColunaDepoisDe(tabela.getColumns(), "ok_encalhado", "valor_total");
-        posicionarColunaDepoisDe(tabela.getColumns(), "custo_verdadeiro", "base_atual");
+        posicionarColunaDepoisDe(
+                tabela.getColumns(),
+                "custo_verdadeiro",
+                "base_atual"
+        );
+
+        posicionarColunaDepoisDe(
+                tabela.getColumns(),
+                "custo_reposicao",
+                "custo_verdadeiro"
+        );
+
+        tabela.refresh();
         tabela.refresh();
 
         solicitarSalvarLayoutTabela();
     }
     
     private void limparTabela() {
-        Alert confirmacao = new Alert(Alert.AlertType.CONFIRMATION);
+        Alert confirmacao =
+                new Alert(Alert.AlertType.CONFIRMATION);
+
         confirmacao.setTitle("Limpar tabela");
         confirmacao.setHeaderText(null);
-        confirmacao.setContentText("Deseja limpar todos os itens da tabela?");
 
-        if (tabela != null && tabela.getScene() != null) {
-            confirmacao.initOwner(tabela.getScene().getWindow());
+        confirmacao.setContentText(
+                "Deseja limpar todos os itens da tabela?"
+        );
+
+        if (tabela != null
+                && tabela.getScene() != null) {
+
+            confirmacao.initOwner(
+                    tabela.getScene().getWindow()
+            );
         }
 
-        if (confirmacao.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+        if (confirmacao
+                .showAndWait()
+                .orElse(ButtonType.CANCEL)
+                != ButtonType.OK) {
+
             return;
         }
 
+        limparTabelaSemConfirmacao();
+    }
+    
+    private void limparTabelaSemConfirmacao() {
+        if (tabela != null) {
+            /*
+             * Encerra qualquer edição e remove seleção/foco
+             * antes de descartar os itens antigos.
+             */
+            tabela.edit(-1, null);
+
+            tabela.getSelectionModel()
+                    .clearSelection();
+
+            if (tabela.getFocusModel() != null) {
+                tabela.getFocusModel().focus(-1);
+            }
+        }
+
+        indiceInicioSelecaoArrastada = -1;
+        indiceLinhaFocoPendente = -1;
+        colunaFocoPendente = null;
+
+        /*
+         * Descarta completamente as linhas antigas.
+         *
+         * Isso remove:
+         * - condições de venda;
+         * - cores especiais;
+         * - confirmação de item obsoleto;
+         * - códigos, quantidades, valores e custos.
+         */
         itens.clear();
 
         for (int i = 0; i < 5; i++) {
             itens.add(new ItemAnalise());
         }
 
-        linhaRodapeTabela.setCodigo(CODIGO_LINHA_RODAPE_TABELA);
+        linhaRodapeTabela.setCodigo(
+                CODIGO_LINHA_RODAPE_TABELA
+        );
+
         linhaRodapeTabela.setDescricao("TOTAL");
+
         itens.add(linhaRodapeTabela);
 
         recalcularResumo();
+        atualizarVisibilidadeColunaOkEncalhado();
+
+        /*
+         * Sobrescreve o estado persistido com
+         * a tabela novamente vazia.
+         */
+        salvarEstadoTabelaAtual();
 
         if (tabela != null) {
-            tabela.getSelectionModel().clearSelection();
-
-            if (tabela.getFocusModel() != null) {
-                tabela.getFocusModel().focus(-1);
-            }
-
-            tabela.refresh();
+            tabela.requestLayout();
         }
+    }
+    
+    private void restaurarPadraoCompletoUsuario() {
+        /*
+         * 1. Restaura e persiste todas as configurações.
+         */
+        ConfiguracaoUsuario configuracaoPadrao =
+                new ConfiguracaoUsuario();
+
+        configuracaoUsuarioService.salvar(
+                configuracaoPadrao
+        );
+
+        configuracaoUsuario =
+                configuracaoUsuarioService.carregar();
         
-        salvarEstadoTabelaAtual();
+        atualizarCampoCotacaoDolar();
+        atualizarCampoFatorImportacao();
+
+        /*
+         * 2. Limpa totalmente a tabela.
+         *
+         * Ao substituir os ItemAnalise, todas as condições,
+         * cores e confirmações antigas também são eliminadas.
+         */
+        limparTabelaSemConfirmacao();
+
+        /*
+         * 3. Remove qualquer ordenação aplicada pelos
+         * cabeçalhos das colunas.
+         */
+        if (tabela != null) {
+            tabela.getSortOrder().clear();
+        }
+
+        /*
+         * 4. Restaura e persiste a ordem padrão das colunas.
+         */
+        reordenarColunasTabela();
+
+        /*
+         * 5. Restaura a seleção padrão para SP.
+         *
+         * SP será 50,00%. SC continuará em 40,22%.
+         */
+        carregarEstadosConfigurados("SP");
+
+        atualizarBaseEstado();
+
+        /*
+         * 6. Atualiza configurações visuais.
+         *
+         * Apenas a Flag de Itens Obsoletos ficará ativa.
+         */
+        atualizarVisibilidadeColunaCustoVerdadeiro();
+        atualizarVisibilidadeColunaCustoReposicao();
         atualizarVisibilidadeColunaOkEncalhado();
+
+        /*
+         * 7. Aplica imediatamente o zoom padrão de 100%.
+         */
+        aplicarZoomInterface();
+
+        recalcularTudoAposAlterarEstado();
+
+        if (tabela != null) {
+            tabela.refresh();
+            tabela.requestLayout();
+        }
     }
     
     private HBox criarRodape() {
@@ -2268,21 +3683,10 @@ public class telaInicial extends Application {
         );
 
         removerLinha.setOnAction(event ->
-                executarComTratamento("Botão REMOVER LINHA", () -> {
-                    List<ItemAnalise> selecionados = obterLinhasSelecionadasEditaveis();
-
-                    if (selecionados.isEmpty()) {
-                        return;
-                    }
-
-                    itens.removeAll(selecionados);
-                    garantirRodapeNoFinal();
-
-                    recalcularResumo();
-
-                    tabela.getSelectionModel().clearSelection();
-                    tabela.refresh();
-                })
+        executarComTratamento(
+                "Botão REMOVER LINHA",
+                this::removerLinhasSelecionadas
+        		)
         );
 
         rodape.getChildren().addAll(ajuda, spacer, adicionarLinha, removerLinha);
@@ -2308,14 +3712,58 @@ public class telaInicial extends Application {
     private record AtualizacaoLinha(int indiceLinha, DadosItem dadosItem) {
     }
     
+    private record ResultadoAtualizacaoDados(
+            List<AtualizacaoLinha> atualizacoes,
+            ResultadoSincronizacao sincronizacao
+    ) {
+    }
+    
     private void abrirTelaConfiguracoes() {
-        TelaConfiguracoes telaConfiguracoes = new TelaConfiguracoes();
-        telaConfiguracoes.exibir(getJanelaAtual());
+        String siglaSelecionada =
+                estadoCombo.getValue() == null
+                        ? "SP"
+                        : estadoCombo
+                                .getValue()
+                                .getSigla();
 
-        configuracaoUsuario = configuracaoUsuarioService.carregar();
+        TelaConfiguracoes telaConfiguracoes =
+                new TelaConfiguracoes();
+
+        boolean solicitouLimpeza =
+                telaConfiguracoes.exibir(
+                        getJanelaAtual()
+                );
+
+        /*
+         * LIMPAR USER DATA possui um fluxo separado,
+         * porque também afeta tabela e layout.
+         */
+        if (solicitouLimpeza) {
+            restaurarPadraoCompletoUsuario();
+            return;
+        }
+
+        /*
+         * Fluxo normal do botão OK, Cancelar ou X.
+         */
+        configuracaoUsuario =
+                configuracaoUsuarioService.carregar();
+
+        atualizarCampoCotacaoDolar();
+        
+        atualizarCampoFatorImportacao();
+
+        carregarEstadosConfigurados(
+                siglaSelecionada
+        );
+
+        atualizarBaseEstado();
+        recalcularTudoAposAlterarEstado();
 
         atualizarVisibilidadeColunaOkEncalhado();
         atualizarVisibilidadeColunaCustoVerdadeiro();
+        atualizarVisibilidadeColunaCustoReposicao();
+
         aplicarZoomInterface();
 
         if (tabela != null) {
@@ -2373,22 +3821,35 @@ public class telaInicial extends Application {
                 && !item.isItemEncalhadoConfirmado();
     }
 
-    private void atualizarPseudoClassesLinha(TableRow<ItemAnalise> row) {
-        if (row == null) {
-            return;
-        }
-
-        row.pseudoClassStateChanged(
-                PSEUDO_ITEM_ENCALHADO,
-                deveDestacarItemEncalhado(row.getItem())
-        );
+    private void atualizarPseudoClassesLinha(
+        TableRow<ItemAnalise> row
+    		) {
+    if (row == null) {
+        return;
     }
+
+    ItemAnalise item = row.getItem();
+
+    boolean destacarComoObsoleto =
+            !row.isEmpty()
+                    && deveDestacarItemEncalhado(item);
+
+    row.pseudoClassStateChanged(
+            PSEUDO_ITEM_ENCALHADO,
+            destacarComoObsoleto
+    );
+
+    atualizarEstiloCondicaoLinha(row);
+}
     
     private void abrirTelaCondicao(ItemAnalise item) {
         executarComTratamento("Abrir tela de condição do item", () -> {
-            if (item == null || isLinhaRodapeTabela(item)) {
-                return;
-            }
+        	if (item == null
+        	        || isLinhaRodapeTabela(item)
+        	        || !temCodigoPreenchido(item)) {
+
+        	    return;
+        	}
 
             List<ItemAnalise> itensParaAplicar = obterLinhasSelecionadasEditaveis();
 
@@ -2396,6 +3857,11 @@ public class telaInicial extends Application {
                 itensParaAplicar.clear();
                 itensParaAplicar.add(item);
             }
+            
+            itensParaAplicar.removeIf(
+                    itemSelecionado ->
+                            !temCodigoPreenchido(itemSelecionado)
+            );
 
             TelaCondicao telaCondicao = new TelaCondicao();
             boolean alterou = telaCondicao.exibir(tabela.getScene().getWindow(), item);
@@ -2422,65 +3888,27 @@ public class telaInicial extends Application {
         });
     }
     
-    private void aplicarEstiloCondicao(TableCell<ItemAnalise, ?> cell, ItemAnalise item) {
+    private void aplicarEstiloCondicao(
+            TableCell<ItemAnalise, ?> cell,
+            ItemAnalise item
+    ) {
         if (cell == null) {
             return;
         }
 
-        if (item == null || isLinhaRodapeTabela(item)) {
-            cell.setStyle("");
-            return;
-        }
-        
-        if (deveDestacarItemEncalhado(item)) {
-            boolean linhaSelecionada = cell.getTableRow() != null
-                    && cell.getTableRow().isSelected();
+        TableRow<ItemAnalise> row =
+                cell.getTableRow();
 
-            String corFundo = linhaSelecionada ? "#F4A3A8" : "#FFC7CE";
+        if (row == null
+                || row.getItem() != item) {
 
-            cell.setStyle(
-                    "-fx-background-color: " + corFundo + ";" +
-                    "-fx-text-fill: #9C0006;" +
-                    "-fx-font-weight: bold;"
-            );
             return;
         }
 
-        CondicaoVenda condicao = item.getCondicaoVenda();
-
-        if (condicao == null || condicao == CondicaoVenda.NORMAL) {
-            cell.setStyle("");
-            return;
-        }
-
-        String corFundo;
-        String corTexto;
-
-        if (condicao == CondicaoVenda.ESPECIAL) {
-            corFundo = item.getCorEspecialFundo();
-            corTexto = item.getCorEspecialTexto();
-        } else {
-            corFundo = condicao.getCorFundo();
-            corTexto = condicao.getCorTexto();
-        }
-
-        if (corFundo == null || corFundo.isBlank()) {
-            cell.setStyle("");
-            return;
-        }
-
-        boolean linhaSelecionada = cell.getTableRow() != null
-                && cell.getTableRow().isSelected();
-
-        String corFundoAplicada = linhaSelecionada
-                ? escurecerCorHex(corFundo, 0.82)
-                : corFundo;
-
-        cell.setStyle(
-                "-fx-background-color: " + corFundoAplicada + ";" +
-                "-fx-text-fill: " + corTexto + ";" +
-                "-fx-font-weight: bold;"
-        );
+        /*
+         * A cor agora pertence à linha, não à célula.
+         */
+        atualizarPseudoClassesLinha(row);
     }
     
     private String escurecerCorHex(String cor, double fator) {
@@ -2626,9 +4054,197 @@ public class telaInicial extends Application {
         alert.setContentText(mensagem);
         alert.showAndWait();
     }
+    
+    private String criarMensagemConclusaoAtualizacao(
+            ResultadoSincronizacao resultado
+    ) {
+        if (resultado == null
+                || resultado.quantidadeFallbackLocal() == 0) {
+
+            return "As bases foram sincronizadas e os itens "
+                    + "da tabela foram atualizados.";
+        }
+
+        StringBuilder nomesBases =
+                new StringBuilder();
+
+        for (
+                ResultadoBase resultadoBase
+                : resultado.resultados()
+        ) {
+            if (!resultadoBase.utilizouFallbackLocal()) {
+                continue;
+            }
+
+            if (!nomesBases.isEmpty()) {
+                nomesBases.append(", ");
+            }
+
+            nomesBases.append(
+                    resultadoBase
+                            .base()
+                            .getNomeArquivo()
+            );
+        }
+
+        return "Os itens da tabela foram atualizados, mas "
+                + "não foi possível acessar todas as bases "
+                + "do servidor."
+                + System.lineSeparator()
+                + System.lineSeparator()
+                + "Foram utilizadas as últimas cópias locais "
+                + "válidas de: "
+                + nomesBases
+                + ".";
+    }
 
     private BigDecimal valorSeguro(BigDecimal valor) {
         return valor == null ? BigDecimal.ZERO : valor;
+    }
+    
+    private static String formatarMoedaUsd(
+            BigDecimal valor
+    ) {
+        NumberFormat formato =
+                NumberFormat.getNumberInstance(
+                        new Locale(
+                                "pt",
+                                "BR"
+                        )
+                );
+
+        formato.setMinimumFractionDigits(2);
+        formato.setMaximumFractionDigits(2);
+
+        return "US$ "
+                + formato.format(
+                        valor == null
+                                ? BigDecimal.ZERO
+                                : valor
+                );
+    }
+    
+    private void persistirCotacaoDolarSeValida(
+            String texto
+    ) {
+        BigDecimal novaCotacao =
+                converterTextoCotacaoDolar(
+                        texto
+                );
+
+        if (novaCotacao == null) {
+            return;
+        }
+
+        if (configuracaoUsuario == null) {
+            configuracaoUsuario =
+                    new ConfiguracaoUsuario();
+        }
+
+        BigDecimal cotacaoAtual =
+                configuracaoUsuario
+                        .getCotacaoDolar();
+
+        /*
+         * Evita gravações repetidas quando apenas
+         * atualizamos o texto programaticamente.
+         */
+        if (cotacaoAtual != null
+                && cotacaoAtual.compareTo(
+                        novaCotacao
+                ) == 0) {
+
+            return;
+        }
+
+        configuracaoUsuario.setCotacaoDolar(
+                novaCotacao
+        );
+
+        configuracaoUsuarioService.salvar(
+                configuracaoUsuario
+        );
+    }
+
+    private BigDecimal converterTextoCotacaoDolar(
+            String texto
+    ) {
+        if (texto == null
+                || texto.isBlank()) {
+
+            return null;
+        }
+
+        try {
+            String textoNormalizado =
+                    texto.trim()
+                            .replace(',', '.');
+
+            /*
+             * Permite que o usuário digite temporariamente
+             * algo como "5," sem causar erro.
+             */
+            if (textoNormalizado.endsWith(".")) {
+                textoNormalizado += "0";
+            }
+
+            BigDecimal valor =
+                    new BigDecimal(
+                            textoNormalizado
+                    );
+
+            if (valor.compareTo(
+                    BigDecimal.ZERO
+            ) <= 0) {
+
+                return null;
+            }
+
+            return valor.setScale(
+                    2,
+                    RoundingMode.HALF_UP
+            );
+
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private void atualizarCampoCotacaoDolar() {
+        if (campoCotacaoDolar == null) {
+            return;
+        }
+
+        BigDecimal cotacao =
+                configuracaoUsuario == null
+                        ? new BigDecimal("5.30")
+                        : configuracaoUsuario
+                                .getCotacaoDolar();
+
+        if (cotacao == null
+                || cotacao.compareTo(
+                        BigDecimal.ZERO
+                ) <= 0) {
+
+            cotacao =
+                    new BigDecimal("5.30");
+        }
+
+        String textoFormatado =
+                cotacao.setScale(
+                        2,
+                        RoundingMode.HALF_UP
+                )
+                        .toPlainString()
+                        .replace('.', ',');
+
+        if (!textoFormatado.equals(
+                campoCotacaoDolar.getText()
+        )) {
+            campoCotacaoDolar.setText(
+                    textoFormatado
+            );
+        }
     }
 
     private static String formatarMoeda(BigDecimal valor) {
@@ -3211,79 +4827,401 @@ public class telaInicial extends Application {
     }
     
     private StackPane criarOverlayAtualizacao() {
-        overlayAtualizacao = new StackPane();
+        overlayAtualizacao =
+                new StackPane();
+
         overlayAtualizacao.setVisible(false);
         overlayAtualizacao.setMouseTransparent(true);
-        overlayAtualizacao.setStyle("-fx-background-color: rgba(0, 0, 0, 0.35);");
 
-        VBox caixa = new VBox(12);
-        caixa.setAlignment(Pos.CENTER);
-        caixa.setPadding(new Insets(22));
-        caixa.setMaxWidth(320);
-        caixa.setMaxHeight(150);
-        caixa.setStyle(
-                "-fx-background-color: #eeeeee;" +
-                "-fx-border-color: #555555;" +
-                "-fx-border-width: 2;" +
-                "-fx-background-radius: 6;" +
-                "-fx-border-radius: 6;"
+        overlayAtualizacao.setStyle(
+                "-fx-background-color: "
+                        + "rgba(0, 0, 0, 0.35);"
         );
 
-        ProgressIndicator progresso = new ProgressIndicator();
-        progresso.setPrefSize(42, 42);
+        VBox caixa =
+                new VBox(12);
 
-        Label texto = new Label("Atualizando dados...");
-        texto.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #111111;");
+        caixa.setAlignment(Pos.CENTER);
+        caixa.setPadding(new Insets(22));
+        caixa.setMaxWidth(390);
+        caixa.setMaxHeight(175);
 
-        Label subtexto = new Label("Aguarde enquanto as bases são recarregadas.");
-        subtexto.setStyle("-fx-font-size: 12px; -fx-text-fill: #333333;");
+        caixa.setStyle(
+                "-fx-background-color: #eeeeee;"
+                        + "-fx-border-color: #555555;"
+                        + "-fx-border-width: 2;"
+                        + "-fx-background-radius: 6;"
+                        + "-fx-border-radius: 6;"
+        );
 
-        caixa.getChildren().addAll(progresso, texto, subtexto);
-        overlayAtualizacao.getChildren().add(caixa);
+        progressoOverlayAtualizacao =
+                new ProgressIndicator(0);
+
+        progressoOverlayAtualizacao.setPrefSize(
+                48,
+                48
+        );
+
+        textoOverlayAtualizacao =
+                new Label("Atualizando dados...");
+
+        textoOverlayAtualizacao.setStyle(
+                "-fx-font-size: 15px;"
+                        + "-fx-font-weight: bold;"
+                        + "-fx-text-fill: #111111;"
+        );
+
+        subtextoOverlayAtualizacao =
+                new Label(
+                        "Preparando sincronização das bases."
+                );
+
+        subtextoOverlayAtualizacao.setStyle(
+                "-fx-font-size: 12px;"
+                        + "-fx-text-fill: #333333;"
+        );
+
+        subtextoOverlayAtualizacao.setWrapText(true);
+        subtextoOverlayAtualizacao.setMaxWidth(340);
+        subtextoOverlayAtualizacao.setAlignment(
+                Pos.CENTER
+        );
+
+        caixa.getChildren().addAll(
+                progressoOverlayAtualizacao,
+                textoOverlayAtualizacao,
+                subtextoOverlayAtualizacao
+        );
+
+        overlayAtualizacao
+                .getChildren()
+                .add(caixa);
 
         return overlayAtualizacao;
     }
+    
+    private void prepararOverlayAtualizacao(
+            String titulo,
+            String detalhe
+    ) {
+        if (textoOverlayAtualizacao != null) {
+            textoOverlayAtualizacao.setText(titulo);
+        }
 
-    private void preCarregarBasesAoIniciar() {
+        if (subtextoOverlayAtualizacao != null) {
+            subtextoOverlayAtualizacao.setText(detalhe);
+        }
+
+        if (progressoOverlayAtualizacao != null) {
+            progressoOverlayAtualizacao.setProgress(0);
+        }
+
         mostrarOverlayAtualizacao(true);
+    }
 
-        ultimaAtualizacaoLabel.setText("Última atualização:\natualizando...");
-        Task<Void> tarefa = new Task<>() {
-            @Override
-            protected Void call() {
-                itemService.preCarregarBases();
-                return null;
+    private void atualizarOverlaySincronizacao(
+            int atual,
+            int total,
+            String nomeBase,
+            String etapa
+    ) {
+        boolean verificando =
+                "Verificando base"
+                        .equalsIgnoreCase(etapa);
+
+        int quantidadeConcluida =
+                verificando
+                        ? atual - 1
+                        : atual;
+
+        double progresso =
+                total <= 0
+                        ? ProgressIndicator
+                                .INDETERMINATE_PROGRESS
+                        : quantidadeConcluida
+                                / (double) total;
+
+        atualizarOverlayAtualizacao(
+                "Sincronizando bases locais...",
+                "Base "
+                        + atual
+                        + " de "
+                        + total
+                        + ": "
+                        + nomeBase
+                        + System.lineSeparator()
+                        + etapa,
+                progresso
+        );
+    }
+
+    private void atualizarOverlayAtualizacao(
+            String titulo,
+            String detalhe,
+            double progresso
+    ) {
+        Runnable atualizacaoVisual = () -> {
+            if (textoOverlayAtualizacao != null) {
+                textoOverlayAtualizacao.setText(
+                        titulo
+                );
+            }
+
+            if (subtextoOverlayAtualizacao != null) {
+                subtextoOverlayAtualizacao.setText(
+                        detalhe
+                );
+            }
+
+            if (progressoOverlayAtualizacao != null) {
+                progressoOverlayAtualizacao.setProgress(
+                        progresso
+                );
             }
         };
 
-        tarefa.setOnSucceeded(event -> {
-            atualizarTextoUltimaAtualizacao();
-            mostrarOverlayAtualizacao(false);
-        });
-
-        tarefa.setOnFailed(event -> {
-            Throwable erro = tarefa.getException();
-
-            ultimaAtualizacaoLabel.setText("Última atualização:\nfalhou");
-
-            mostrarErro(
-                    "Inicialização > pré-carregamento das bases",
-                    erro
+        if (Platform.isFxApplicationThread()) {
+            atualizacaoVisual.run();
+        } else {
+            Platform.runLater(
+                    atualizacaoVisual
             );
-        });
-
-        Thread thread = new Thread(tarefa, "PreCarregamentoBasesThread");
-        thread.setDaemon(true);
-        thread.start();
+        }
     }
-    
-    private void mostrarOverlayAtualizacao(boolean mostrar) {
+
+    private void preCarregarBasesAoIniciar() {
+    if (atualizacaoDadosEmAndamento) {
+        return;
+    }
+
+    /*
+     * Bloqueia o botão ATUALIZAR DADOS enquanto
+     * a inicialização ainda está carregando as bases.
+     */
+    atualizacaoDadosEmAndamento = true;
+
+    prepararOverlayAtualizacao(
+            "Inicializando programa...",
+            "Preparando sincronização das bases."
+    );
+
+    ultimaAtualizacaoLabel.setText(
+            "Última atualização:\natualizando..."
+    );
+
+    /*
+     * A lista da TableView pertence à thread do JavaFX.
+     * Por isso, coletamos os códigos e índices antes
+     * de iniciar a tarefa em segundo plano.
+     */
+    List<Integer> indices =
+            new ArrayList<>();
+
+    List<String> codigos =
+            new ArrayList<>();
+
+    for (int i = 0; i < itens.size(); i++) {
+        ItemAnalise item =
+                itens.get(i);
+
+        if (isLinhaRodapeTabela(item)) {
+            continue;
+        }
+
+        if (!temCodigoPreenchido(item)) {
+            continue;
+        }
+
+        indices.add(i);
+        codigos.add(item.getCodigo());
+    }
+
+    Task<ResultadoAtualizacaoDados> tarefa =
+            new Task<>() {
+
+        @Override
+        protected ResultadoAtualizacaoDados call()
+                throws Exception {
+
+            /*
+             * Primeiro sincroniza os arquivos e monta
+             * novamente os caches em memória.
+             */
+            ResultadoSincronizacao resultadoSincronizacao =
+                    itemService.preCarregarBases(
+                            (
+                                    atual,
+                                    total,
+                                    base,
+                                    etapa
+                            ) -> atualizarOverlaySincronizacao(
+                                    atual,
+                                    total,
+                                    base.getNomeArquivo(),
+                                    etapa
+                            )
+                    );
+
+            atualizarOverlayAtualizacao(
+                    "Inicializando programa...",
+                    codigos.isEmpty()
+                            ? "Finalizando inicialização."
+                            : "Carregando os dados de "
+                                    + codigos.size()
+                                    + (
+                                    codigos.size() == 1
+                                            ? " item salvo."
+                                            : " itens salvos."
+                            ),
+                    ProgressIndicator.INDETERMINATE_PROGRESS
+            );
+
+            /*
+             * Depois que os caches estiverem prontos,
+             * consulta novamente os itens restaurados.
+             *
+             * Isso carrega Custo Reposição, processo,
+             * custos e demais informações dependentes
+             * das bases.
+             */
+            List<AtualizacaoLinha> atualizacoes =
+                    new ArrayList<>();
+
+            for (int i = 0; i < codigos.size(); i++) {
+                String codigo =
+                        codigos.get(i);
+
+                int indiceLinha =
+                        indices.get(i);
+
+                DadosItem dadosItem =
+                        itemService
+                                .buscarPorCodigo(codigo)
+                                .orElse(null);
+
+                atualizacoes.add(
+                        new AtualizacaoLinha(
+                                indiceLinha,
+                                dadosItem
+                        )
+                );
+            }
+
+            return new ResultadoAtualizacaoDados(
+                    atualizacoes,
+                    resultadoSincronizacao
+            );
+        }
+    };
+
+    tarefa.setOnSucceeded(event -> {
+        ResultadoAtualizacaoDados resultadoTarefa =
+                tarefa.getValue();
+
+        List<AtualizacaoLinha> atualizacoes =
+                resultadoTarefa == null
+                        ? List.of()
+                        : resultadoTarefa.atualizacoes();
+
+        ResultadoSincronizacao resultadoSincronizacao =
+                resultadoTarefa == null
+                        ? null
+                        : resultadoTarefa.sincronizacao();
+
+        /*
+         * Aplica os dados somente depois de retornar
+         * à thread visual do JavaFX.
+         */
+        for (
+                AtualizacaoLinha atualizacao
+                : atualizacoes
+        ) {
+            int indice =
+                    atualizacao.indiceLinha();
+
+            if (indice < 0
+                    || indice >= itens.size()) {
+
+                continue;
+            }
+
+            ItemAnalise item =
+                    itens.get(indice);
+
+            if (isLinhaRodapeTabela(item)) {
+                continue;
+            }
+
+            item.aplicarDadosItem(
+                    atualizacao.dadosItem()
+            );
+
+            recalcularItem(item);
+        }
+
+        recalcularResumo();
+        atualizarVisibilidadeColunaOkEncalhado();
+
+        if (tabela != null) {
+            tabela.refresh();
+        }
+
+        atualizarTextoUltimaAtualizacao(
+                resultadoSincronizacao
+        );
+
+        atualizacaoDadosEmAndamento = false;
+        mostrarOverlayAtualizacao(false);
+    });
+
+    tarefa.setOnFailed(event -> {
+        Throwable erro =
+                tarefa.getException();
+
+        ultimaAtualizacaoLabel.setText(
+                "Última atualização:\nfalhou"
+        );
+
+        atualizacaoDadosEmAndamento = false;
+        mostrarOverlayAtualizacao(false);
+
+        mostrarErro(
+                "Inicialização > sincronização, "
+                        + "pré-carregamento das bases e "
+                        + "consulta dos itens salvos",
+                erro
+        );
+    });
+
+    tarefa.setOnCancelled(event -> {
+        atualizacaoDadosEmAndamento = false;
+        mostrarOverlayAtualizacao(false);
+    });
+
+    Thread thread =
+            new Thread(
+                    tarefa,
+                    "PreCarregamentoBasesThread"
+            );
+
+    thread.setDaemon(true);
+    thread.start();
+}
+
+    private void mostrarOverlayAtualizacao(
+            boolean mostrar
+    ) {
         if (overlayAtualizacao == null) {
             return;
         }
 
-        overlayAtualizacao.setVisible(mostrar);
-        overlayAtualizacao.setMouseTransparent(!mostrar);
+        overlayAtualizacao.setVisible(
+                mostrar
+        );
+
+        overlayAtualizacao.setMouseTransparent(
+                !mostrar
+        );
     }
     
     private class CodigoComBotaoCell extends TableCell<ItemAnalise, String> {
@@ -3619,6 +5557,66 @@ public class telaInicial extends Application {
                     && !item.getCodigo().trim().isEmpty();
         }
     }
+    
+    private class CustoReposicaoTableCell
+    extends TableCell<
+            ItemAnalise,
+            BigDecimal
+    > {
+
+public CustoReposicaoTableCell() {
+    setAlignment(
+            Pos.CENTER_RIGHT
+    );
+}
+
+@Override
+protected void updateItem(
+        BigDecimal valor,
+        boolean empty
+) {
+    super.updateItem(
+            valor,
+            empty
+    );
+
+    ItemAnalise itemLinha =
+            getTableRow() == null
+                    ? null
+                    : getTableRow().getItem();
+
+    /*
+     * Nesta primeira etapa o custo
+     * deve permanecer visualmente vazio.
+     */
+    if (empty
+            || isLinhaRodapeTabela(
+                    itemLinha
+            )
+            || !temCodigoPreenchido(
+                    itemLinha
+            )
+            || valor == null
+            || valor.compareTo(
+                    BigDecimal.ZERO
+            ) <= 0) {
+
+        setText("");
+        setStyle("");
+        return;
+    }
+
+    /*
+     * Este trecho já está preparado
+     * para a próxima etapa.
+     */
+    setText(
+            formatarMoedaUsd(valor)
+    );
+
+    setStyle("");
+}
+}
 
     private class MargemTableCell extends TableCell<ItemAnalise, BigDecimal> {
 
@@ -3766,8 +5764,25 @@ public class telaInicial extends Application {
         }
 
         if (data == null) {
-        	setText("S./REG.");
-        	return;
+            boolean colunaDataCustoAtual =
+                    getTableColumn() != null
+                            && "base_atual_data_custo".equals(
+                                    getTableColumn().getId()
+                            );
+
+            boolean possuiCustoAtual =
+                    itemLinha != null
+                            && itemLinha.getCustoAtual() != null
+                            && itemLinha.getCustoAtual()
+                                    .compareTo(BigDecimal.ZERO) > 0;
+
+            if (colunaDataCustoAtual && possuiCustoAtual) {
+                setText("ESTIMADO");
+            } else {
+                setText("S./REG.");
+            }
+
+            return;
         }
 
         setText(formatter.format(data));

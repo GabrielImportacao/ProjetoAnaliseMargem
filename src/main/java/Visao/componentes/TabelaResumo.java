@@ -55,7 +55,7 @@ public class TabelaResumo extends GridPane {
         label.setPadding(Insets.EMPTY);
 
         label.setStyle(
-                "-fx-font-size: 10px;" +
+                "-fx-font-size: 13px;" +
                 "-fx-font-weight: bold;" +
                 "-fx-text-fill: #333333;"
         );
@@ -69,7 +69,7 @@ public class TabelaResumo extends GridPane {
         label.setPadding(new Insets(0, 6, 0, 0));
 
         label.setStyle(
-                "-fx-font-size: 10px;" +
+                "-fx-font-size: 13px;" +
                 "-fx-font-weight: bold;" +
                 "-fx-text-fill: #000000;"
         );

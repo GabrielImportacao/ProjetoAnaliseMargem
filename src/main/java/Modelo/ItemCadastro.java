@@ -14,6 +14,7 @@ public class ItemCadastro {
     private final BigDecimal custoUnitarioPlanilha;
     private final String registroCustoPlanilha;
     private final BigDecimal precoUnitarioLiquidoAtual;
+    private final BigDecimal fatorImportacaoFallback;
 
     public ItemCadastro(
             String codigoItem,
@@ -25,7 +26,8 @@ public class ItemCadastro {
             BigDecimal pesoLiquido,
             BigDecimal custoUnitarioPlanilha,
             String registroCustoPlanilha,
-            BigDecimal precoUnitarioLiquidoAtual
+            BigDecimal precoUnitarioLiquidoAtual,
+            BigDecimal fatorImportacaoFallback
     ) {
         this.codigoItem = codigoItem;
         this.descricao = descricao;
@@ -37,6 +39,11 @@ public class ItemCadastro {
         this.custoUnitarioPlanilha = custoUnitarioPlanilha;
         this.registroCustoPlanilha = registroCustoPlanilha;
         this.precoUnitarioLiquidoAtual = precoUnitarioLiquidoAtual;
+        this.fatorImportacaoFallback = fatorImportacaoFallback;
+    }
+    
+    public BigDecimal getFatorImportacaoFallback() {
+        return fatorImportacaoFallback;
     }
 
     public String getCodigoItem() {

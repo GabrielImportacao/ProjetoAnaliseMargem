@@ -15,6 +15,10 @@ import java.util.Map;
 import java.util.Optional;
 
 public class ItemRepositorySqlite implements ItemRepository {
+	
+	private static final String
+    COLUNA_FATOR_IMPORTACAO_FALLBACK =
+    "fator_liquido_brl";
 
     private final ConexaoMetalSqlite conexaoMetalSqlite;
 
@@ -152,15 +156,40 @@ public class ItemRepositorySqlite implements ItemRepository {
 
         return new ItemCadastro(
                 codigoItem,
-                valorTexto(resultSet, colunas, "DESCRICAO"),
-                valorBigDecimal(resultSet, colunas, "IPI"),
+                valorTexto(
+                        resultSet,
+                        colunas,
+                        "DESCRICAO"
+                ),
+                valorBigDecimal(
+                        resultSet,
+                        colunas,
+                        "IPI"
+                ),
                 "",
-                valorTexto(resultSet, colunas, "UN"),
+                valorTexto(
+                        resultSet,
+                        colunas,
+                        "UN"
+                ),
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
-                valorBigDecimal(resultSet, colunas, "CUSTO_ATUAL"),
+                valorBigDecimal(
+                        resultSet,
+                        colunas,
+                        "CUSTO_ATUAL"
+                ),
                 "METAL.DB",
-                valorBigDecimal(resultSet, colunas, "PRECO_LIQUIDO")
+                valorBigDecimal(
+                        resultSet,
+                        colunas,
+                        "PRECO_LIQUIDO"
+                ),
+                valorBigDecimalOpcional(
+                        resultSet,
+                        colunas,
+                        COLUNA_FATOR_IMPORTACAO_FALLBACK
+                )
         );
     }
 
@@ -174,6 +203,73 @@ public class ItemRepositorySqlite implements ItemRepository {
         String valor = resultSet.getString(nomeReal);
 
         return valor == null ? "" : valor.trim();
+    }
+    
+    private BigDecimal valorBigDecimalOpcional(
+            ResultSet resultSet,
+            Map<String, String> colunas,
+            String nomeColunaConfigurada
+    ) throws Exception {
+        if (nomeColunaConfigurada == null
+                || nomeColunaConfigurada.isBlank()) {
+
+            return null;
+        }
+
+        /*
+         * Normaliza o nome informado na constante
+         * exatamente da mesma forma que os nomes
+         * encontrados no banco.
+         */
+        String nomeNormalizado =
+                normalizarTexto(
+                        nomeColunaConfigurada
+                );
+
+        String nomeReal =
+                colunas.get(
+                        nomeNormalizado
+                );
+
+        /*
+         * A coluna ainda não existe no banco atual.
+         * Não interrompe o carregamento dos itens.
+         */
+        if (nomeReal == null
+                || nomeReal.isBlank()) {
+
+            return null;
+        }
+
+        String texto =
+                resultSet.getString(
+                        nomeReal
+                );
+
+        if (texto == null
+                || texto.isBlank()
+                || texto.trim().equals("-")) {
+
+            return null;
+        }
+
+        BigDecimal valor =
+                converterBigDecimal(
+                        texto
+                );
+
+        /*
+         * Zero ou negativo não constitui
+         * um fator válido para divisão.
+         */
+        if (valor.compareTo(
+                BigDecimal.ZERO
+        ) <= 0) {
+
+            return null;
+        }
+
+        return valor;
     }
 
     private BigDecimal valorBigDecimal(ResultSet resultSet, Map<String, String> colunas, String nomeNormalizado) throws Exception {

@@ -1,5 +1,5 @@
 ===== DIAGNOSTICO DE BASES =====
-Data/Hora: 2026-07-14T08:42:53.702563600
+Data/Hora: 2026-08-03T09:50:06.760934900
 user.dir: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
 user.home: C:\Users\import3
 java.version: 25.0.2
@@ -12,15 +12,15 @@ COMPUTERNAME: IMPORT3P15
 
 --------------------------------------------------
 BASE: custos.db
-CAMINHO CONFIGURADO: K:\Importacao\Troca Publica\Bancos de Dados (Não Excluir)\BD_METAL\AtualizadorBD\custos.db
-CAMINHO ABSOLUTO: K:\Importacao\Troca Publica\Bancos de Dados (Não Excluir)\BD_METAL\AtualizadorBD\custos.db
+CAMINHO CONFIGURADO: C:\Users\import3\AppData\Local\ProgramaAnaliseMargem\bases\custos.db
+CAMINHO ABSOLUTO: C:\Users\import3\AppData\Local\ProgramaAnaliseMargem\bases\custos.db
 EXISTE: true
 É ARQUIVO: true
 É PASTA: false
 PODE LER: true
 PODE ESCREVER: true
-TAMANHO BYTES: 2076672
-ÚLTIMA MODIFICAÇÃO: 2026-07-06T13:56:59.7523638Z
+TAMANHO BYTES: 3829760
+ÚLTIMA MODIFICAÇÃO: 2026-07-31T14:08:16.3471244Z
 
 --------------------------------------------------
 BASE: BD_METAL_ITEM_AT.xlsb
@@ -31,18 +31,18 @@ EXISTE: true
 É PASTA: false
 PODE LER: true
 PODE ESCREVER: true
-TAMANHO BYTES: 774481
-ÚLTIMA MODIFICAÇÃO: 2026-07-06T18:20:08.8858675Z
+TAMANHO BYTES: 787437
+ÚLTIMA MODIFICAÇÃO: 2026-07-31T18:42:06.9778008Z
 
 --------------------------------------------------
 BASE: movestq.db
-CAMINHO CONFIGURADO: K:\Importacao\Troca Publica\Bancos de Dados (Não Excluir)\SistemaBD\banco\movestq.db
-CAMINHO ABSOLUTO: K:\Importacao\Troca Publica\Bancos de Dados (Não Excluir)\SistemaBD\banco\movestq.db
+CAMINHO CONFIGURADO: C:\Users\import3\AppData\Local\ProgramaAnaliseMargem\bases\movestq.db
+CAMINHO ABSOLUTO: C:\Users\import3\AppData\Local\ProgramaAnaliseMargem\bases\movestq.db
 EXISTE: true
 É ARQUIVO: true
 É PASTA: false
 PODE LER: true
 PODE ESCREVER: true
 TAMANHO BYTES: 356352
-ÚLTIMA MODIFICAÇÃO: 2026-07-13T11:11:51.0401093Z
+ÚLTIMA MODIFICAÇÃO: 2026-08-03T11:08:38.5213827Z
 

@@ -13,6 +13,11 @@ public class DadosItemConsulta {
     private final BigDecimal pesoBruto;
     private final BigDecimal pesoLiquido;
     private final BigDecimal precoUnitarioLiquidoAtual;
+    private final BigDecimal
+    custoReposicao;
+
+private final String
+    processoReposicao;
 
     private final BigDecimal custoAtual;
     private final String registroCustoAtual;
@@ -46,6 +51,8 @@ public class DadosItemConsulta {
             BigDecimal pesoBruto,
             BigDecimal pesoLiquido,
             BigDecimal precoUnitarioLiquidoAtual,
+            BigDecimal custoReposicao,
+            String processoReposicao,
             BigDecimal custoAtual,
             String registroCustoAtual,
             LocalDate dataCustoAtual,
@@ -73,6 +80,11 @@ public class DadosItemConsulta {
         this.pesoBruto = pesoBruto;
         this.pesoLiquido = pesoLiquido;
         this.precoUnitarioLiquidoAtual = precoUnitarioLiquidoAtual;
+        this.custoReposicao =
+                custoReposicao;
+
+        this.processoReposicao =
+                processoReposicao;
         this.custoAtual = custoAtual;
         this.registroCustoAtual = registroCustoAtual;
         this.dataCustoAtual = dataCustoAtual;
@@ -151,6 +163,14 @@ public class DadosItemConsulta {
 
     public BigDecimal getCustoAtual() {
         return custoAtual;
+    }
+    
+    public BigDecimal getCustoReposicao() {
+        return custoReposicao;
+    }
+
+    public String getProcessoReposicao() {
+        return processoReposicao;
     }
 
     public String getRegistroCustoAtual() {

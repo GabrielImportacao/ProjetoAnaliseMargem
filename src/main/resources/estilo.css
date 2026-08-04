@@ -20,6 +20,54 @@
     -fx-fill: #000000;
 }
 
+.bloco-cotacao-dolar {
+    -fx-background-color: #EEEEEE;
+
+    -fx-border-color: #555555;
+    -fx-border-width: 3;
+    -fx-border-radius: 0;
+
+    -fx-background-radius: 0;
+    -fx-padding: 0;
+}
+
+.rotulo-cotacao-dolar {
+    -fx-background-color: #EEEEEE;
+
+    -fx-border-color:
+        transparent
+        #555555
+        transparent
+        transparent;
+
+    -fx-border-width: 0 3 0 0;
+
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #555555;
+
+    -fx-padding: 0 6 0 6;
+}
+
+.campo-cotacao-dolar {
+    -fx-background-color: #EEEEEE;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #555555;
+
+    -fx-padding: 0 6 0 6;
+}
+
+.campo-cotacao-dolar:focused {
+    -fx-background-color: #FFFFFF;
+}
+
 .grupo-cinza .column-header,
 .coluna-cinza .column-header {
     -fx-background-color: #7F7F7F;
@@ -155,18 +203,18 @@
 }
 
 .rodape-tabela {
-    -fx-background-color: #e6e6e6;
+    -fx-background-color: #E6E6E6;
     -fx-border-color: #555555;
     -fx-border-width: 0 0 1 0;
 }
 
-.table-row-cell.linha-rodape-tabela {
-    -fx-background-color: #e6e6e6;
+.table-row-cell:linha-rodape-tabela {
+    -fx-background-color: #E6E6E6;
     -fx-font-weight: bold;
 }
 
-.table-row-cell.linha-rodape-tabela .table-cell {
-    -fx-background-color: #eeeeee;
+.table-row-cell:linha-rodape-tabela .table-cell {
+    -fx-background-color: #EEEEEE;
     -fx-border-color: #555555;
     -fx-border-width: 1 1 1 0;
     -fx-font-weight: bold;
@@ -174,7 +222,7 @@
 }
 
 .rodape-tabela-celula {
-    -fx-background-color: #eeeeee;
+    -fx-background-color: #EEEEEE;
     -fx-border-color: #555555;
     -fx-border-width: 0 1 1 0;
     -fx-min-height: 24px;
@@ -191,7 +239,7 @@
 .logo-icone {
     -fx-font-size: 34px;
     -fx-font-weight: bold;
-    -fx-text-fill: #1c2f46;
+    -fx-text-fill: #1C2F46;
     -fx-padding: 0;
 }
 
@@ -237,7 +285,7 @@
 .logo-texto {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: #1c2f46;
+    -fx-text-fill: #1C2F46;
 }
 
 .titulo-principal {
@@ -311,7 +359,7 @@
 }
 
 .campo-codigo-tabela:focused {
-    -fx-background-color: #ffffff;
+    -fx-background-color: #FFFFFF;
     -fx-background-insets: 0;
     -fx-border-color: #777777;
     -fx-border-width: 1;
@@ -357,7 +405,7 @@
 
 .box-pequeno {
     -fx-border-color: #555555;
-    -fx-background-color: #e1e1e1;
+    -fx-background-color: #E1E1E1;
     -fx-alignment: center;
     -fx-padding: 2 8 5 8;
     -fx-min-width: 95px;
@@ -377,12 +425,12 @@
 
 .resumo-superior {
     -fx-border-color: #555555;
-    -fx-background-color: #d7d7d7;
+    -fx-background-color: #D7D7D7;
 }
 
 .resumo-cabecalho {
     -fx-border-color: #555555;
-    -fx-background-color: #c9c9c9;
+    -fx-background-color: #C9C9C9;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-padding: 2 5 2 5;
@@ -391,7 +439,7 @@
 
 .resumo-celula {
     -fx-border-color: #555555;
-    -fx-background-color: #e2e2e2;
+    -fx-background-color: #E2E2E2;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-padding: 2 5 2 5;
@@ -447,6 +495,11 @@
     -fx-background-color: #F31D20;
 }
 
+.grupo-verde .column-header,
+.coluna-verde .column-header {
+    -fx-background-color: #548235;
+}
+
 .grupo-laranja .column-header,
 .coluna-laranja .column-header {
     -fx-background-color: #F9AC05;
@@ -458,17 +511,17 @@
 }
 
 .margem-baixa {
-    -fx-text-fill: #d80000;
+    -fx-text-fill: #D80000;
     -fx-font-weight: bold;
 }
 
 .margem-media {
-    -fx-text-fill: #b36b00;
+    -fx-text-fill: #B36B00;
     -fx-font-weight: bold;
 }
 
 .margem-boa {
-    -fx-text-fill: #006b2d;
+    -fx-text-fill: #006B2D;
     -fx-font-weight: bold;
 }
 
@@ -489,25 +542,74 @@
 }
 
 .tabela-analise .column-header-background .show-hide-columns-button {
-    -fx-background-color: #0069a6;
-    -fx-border-color: #0069a6;
+    -fx-background-color: #0069A6;
+    -fx-border-color: #0069A6;
 }
 
 .tabela-analise .column-header-background {
-    -fx-background-color: #0069a6;
+    -fx-background-color: #0069A6;
 }
 
 .tabela-analise .column-header-background .filler {
-    -fx-background-color: #0069a6;
-    -fx-border-color: #0069a6;
+    -fx-background-color: #0069A6;
+    -fx-border-color: #0069A6;
 }
 
 .tabela-analise .column-header-background .show-hide-columns-button {
-    -fx-background-color: #0069a6;
-    -fx-border-color: #0069a6;
+    -fx-background-color: #0069A6;
+    -fx-border-color: #0069A6;
 }
 
 .tabela-analise .column-header-background .nested-column-header {
-    -fx-background-color: #0069a6;
+    -fx-background-color: #0069A6;
 }
 
+
+/*
+ * =========================================================
+ * CONDIÇÃO DE VENDA — COR DA LINHA INTEIRA
+ * =========================================================
+ */
+
+/*
+ * Linha colorida em estado normal.
+ */
+.tabela-analise .table-row-cell:condicao-colorida,
+.tabela-analise .table-row-cell:condicao-colorida .table-cell {
+    -fx-background-color: -cor-condicao-fundo;
+    -fx-text-fill: -cor-condicao-texto;
+    -fx-font-weight: bold;
+}
+
+/*
+ * Linha colorida selecionada:
+ * mantém a cor da condição, mas em tom mais escuro.
+ */
+.tabela-analise .table-row-cell:filled:even:condicao-colorida:selected,
+.tabela-analise .table-row-cell:filled:even:condicao-colorida:selected .table-cell,
+
+.tabela-analise .table-row-cell:filled:odd:condicao-colorida:selected,
+.tabela-analise .table-row-cell:filled:odd:condicao-colorida:selected .table-cell,
+
+.tabela-analise .table-row-cell:condicao-colorida:selected,
+.tabela-analise .table-row-cell:condicao-colorida:selected .table-cell {
+
+    -fx-background-color: derive(
+        -cor-condicao-fundo,
+        -18%
+    );
+
+    -fx-text-fill: -cor-condicao-texto;
+    -fx-font-weight: bold;
+    -fx-background-insets: 0;
+}
+
+/*
+ * Cor dos textos internos da linha.
+ */
+.tabela-analise .table-row-cell:condicao-colorida .text,
+.tabela-analise .table-row-cell:condicao-colorida:selected .text,
+.tabela-analise .table-row-cell:filled:even:condicao-colorida:selected .text,
+.tabela-analise .table-row-cell:filled:odd:condicao-colorida:selected .text {
+    -fx-fill: -cor-condicao-texto;
+}

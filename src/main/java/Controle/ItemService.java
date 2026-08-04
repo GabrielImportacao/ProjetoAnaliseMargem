@@ -9,26 +9,169 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import Controle.SincronizacaoBasesService.OuvinteProgresso;
+import Controle.SincronizacaoBasesService.ResultadoBase;
+import Controle.SincronizacaoBasesService.ResultadoSincronizacao;
 
 import Infraestrutura.DiagnosticoBases;
 
 public class ItemService {
 
     private final DadosItemService dadosItemService;
+    private final SincronizacaoBasesService sincronizacaoBasesService;
+    /*
+     * Impede que duas sincronizações tentem substituir
+     * os bancos locais ao mesmo tempo.
+     */
+    private final Object bloqueioSincronizacao = new Object();
     
     public ItemService() {
-        this.dadosItemService = new DadosItemService();
-    }
+        this.dadosItemService =
+                new DadosItemService();
 
-    public void recarregarBases() {
-        dadosItemService.recarregarBases();
+        this.sincronizacaoBasesService =
+                new SincronizacaoBasesService();
     }
     
+
+    public void recarregarBases() {
+        recarregarBases(null);
+    }
+
+    public ResultadoSincronizacao recarregarBases(
+            OuvinteProgresso ouvinte
+    ) {
+        /*
+         * Primeiro atualizamos os arquivos locais.
+         *
+         * Depois reconstruímos os caches utilizando
+         * exclusivamente as cópias locais.
+         */
+        ResultadoSincronizacao resultado =
+                sincronizarBasesLocais(ouvinte);
+
+        dadosItemService.recarregarBases();
+
+        return resultado;
+    }
+
     public void preCarregarBases() {
+        preCarregarBases(null);
+    }
+
+    public ResultadoSincronizacao preCarregarBases(
+            OuvinteProgresso ouvinte
+    ) {
+        /*
+         * Na inicialização, sincronizamos antes de qualquer
+         * repositório abrir os bancos locais.
+         */
+        ResultadoSincronizacao resultado =
+                sincronizarBasesLocais(ouvinte);
+
         DiagnosticoBases.registrar();
 
         dadosItemService.preCarregarBases();
         aquecerConsultasIniciais();
+
+        return resultado;
+    }
+
+    private ResultadoSincronizacao sincronizarBasesLocais(
+            OuvinteProgresso ouvinte
+    ) {
+        synchronized (bloqueioSincronizacao) {
+            ResultadoSincronizacao resultado =
+                    sincronizacaoBasesService.sincronizarTodas(
+                            (
+                                    atual,
+                                    total,
+                                    base,
+                                    etapa
+                            ) -> {
+                                System.out.println(
+                                        "[SINCRONIZAÇÃO "
+                                                + atual
+                                                + "/"
+                                                + total
+                                                + "] "
+                                                + base.getNomeArquivo()
+                                                + " - "
+                                                + etapa
+                                );
+
+                                if (ouvinte != null) {
+                                    ouvinte.atualizar(
+                                            atual,
+                                            total,
+                                            base,
+                                            etapa
+                                    );
+                                }
+                            }
+                    );
+
+            /*
+             * Resultado individual de cada banco.
+             */
+            for (
+                    ResultadoBase resultadoBase
+                    : resultado.resultados()
+            ) {
+                System.out.println(
+                        "[BASE] "
+                                + resultadoBase
+                                        .base()
+                                        .getNomeArquivo()
+                                + " | "
+                                + resultadoBase
+                                        .status()
+                                        .getDescricao()
+                                + " | "
+                                + resultadoBase.mensagem()
+                );
+            }
+
+            if (resultado.podeIniciarPrograma()) {
+                return resultado;
+            }
+
+            StringBuilder detalhes =
+                    new StringBuilder();
+
+            for (
+                    ResultadoBase resultadoBase
+                    : resultado.resultados()
+            ) {
+                if (!resultadoBase.falhouObrigatoria()) {
+                    continue;
+                }
+
+                if (!detalhes.isEmpty()) {
+                    detalhes.append(
+                            System.lineSeparator()
+                    );
+                }
+
+                detalhes.append("- ")
+                        .append(
+                                resultadoBase
+                                        .base()
+                                        .getNomeArquivo()
+                        )
+                        .append(": ")
+                        .append(
+                                resultadoBase.mensagem()
+                        );
+            }
+
+            throw new IllegalStateException(
+                    "Não foi possível disponibilizar uma ou "
+                            + "mais bases obrigatórias."
+                            + System.lineSeparator()
+                            + detalhes
+            );
+        }
     }
 
     private void aquecerConsultasIniciais() {
@@ -64,9 +207,18 @@ public class ItemService {
     private DadosItem converterParaDadosItem(DadosItemConsulta dadosConsulta) {
         return new DadosItem(
         		dadosConsulta.getCodigoItem(),
-                dadosConsulta.getDescricao(),
+        		dadosConsulta.getDescricao(),
 
-                tratarBigDecimal(dadosConsulta.getCustoAtual()),
+        		dadosConsulta.getCustoReposicao(),
+
+        		tratarTexto(
+        		        dadosConsulta
+        		                .getProcessoReposicao()
+        		),
+
+        		tratarBigDecimal(
+        		        dadosConsulta.getCustoAtual()
+        		),
                 tratarBigDecimal(dadosConsulta.getCustoVerdadeiro()),
                 tratarBigDecimal(dadosConsulta.getCustoPromob()),
                 tratarBigDecimal(dadosConsulta.getCustoAnterior()),

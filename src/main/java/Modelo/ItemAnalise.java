@@ -63,6 +63,58 @@ public class ItemAnalise {
     private final ObjectProperty<LocalDate> dataCustoVerdadeiro = new SimpleObjectProperty<>();
     private final ObjectProperty<BigDecimal> custoVerdadeiro = new SimpleObjectProperty<>(BigDecimal.ZERO);
     
+    /*
+     * Dados do Custo Reposição.
+     *
+     * Permanecerão vazios até implementarmos
+     * as regras de busca nas bases.
+     */
+    private final ObjectProperty<BigDecimal> custoReposicao =
+            new SimpleObjectProperty<>();
+
+    private final StringProperty processoReposicao =
+            new SimpleStringProperty("");
+    
+    public BigDecimal getCustoReposicao() {
+        return custoReposicao.get();
+    }
+
+    public void setCustoReposicao(
+            BigDecimal custoReposicao
+    ) {
+        /*
+         * Aqui permitimos null porque null significa:
+         * "ainda não calculado".
+         */
+        this.custoReposicao.set(
+                custoReposicao
+        );
+    }
+
+    public ObjectProperty<BigDecimal>
+    custoReposicaoProperty() {
+        return custoReposicao;
+    }
+
+    public String getProcessoReposicao() {
+        return processoReposicao.get();
+    }
+
+    public void setProcessoReposicao(
+            String processoReposicao
+    ) {
+        this.processoReposicao.set(
+                processoReposicao == null
+                        ? ""
+                        : processoReposicao
+        );
+    }
+
+    public StringProperty
+    processoReposicaoProperty() {
+        return processoReposicao;
+    }
+    
     public BigDecimal getMargemVerdadeira() {
         return margemVerdadeira.get();
     }
@@ -481,6 +533,9 @@ public class ItemAnalise {
             setCustoVerdadeiro(BigDecimal.ZERO);
             setCustoPromob(BigDecimal.ZERO);
             setCustoAnterior(BigDecimal.ZERO);
+            
+            setCustoReposicao(null);
+            setProcessoReposicao("");
 
             setRegistroCustoAtual("");
             setRegistroCustoVerdadeiro("");
@@ -517,6 +572,14 @@ public class ItemAnalise {
         setCustoVerdadeiro(dados.getCustoVerdadeiro());
         setCustoPromob(dados.getCustoPromob());
         setCustoAnterior(dados.getCustoAnterior());
+        
+        setCustoReposicao(
+                dados.getCustoReposicao()
+        );
+
+        setProcessoReposicao(
+                dados.getProcessoReposicao()
+        );
 
         setRegistroCustoAtual(dados.getRegistroCustoAtual());
         setRegistroCustoVerdadeiro(dados.getRegistroCustoVerdadeiro());

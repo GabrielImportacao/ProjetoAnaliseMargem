@@ -6,6 +6,12 @@ import java.time.LocalDate;
 public class DadosItem {
     private final String codigo;
     private final String descricao;
+    
+    private final BigDecimal
+    custoReposicao;
+
+private final String
+    processoReposicao;
 
     private final BigDecimal custoAtual;
     private final BigDecimal custoVerdadeiro;
@@ -27,12 +33,15 @@ public class DadosItem {
     private final LocalDate dataUltimaSaida;
     private final boolean itemEncalhado;
 
-    public DadosItem(String codigo,
-                     String descricao,
-                     BigDecimal custoAtual,
-                     BigDecimal custoVerdadeiro,
-                     BigDecimal custoPromob,
-                     BigDecimal custoAnterior,
+    public DadosItem(
+            String codigo,
+            String descricao,
+            BigDecimal custoReposicao,
+            String processoReposicao,
+            BigDecimal custoAtual,
+            BigDecimal custoVerdadeiro,
+            BigDecimal custoPromob,
+            BigDecimal custoAnterior,
                      String registroCustoAtual,
                      String registroCustoVerdadeiro,
                      String registroCustoPromob,
@@ -47,6 +56,11 @@ public class DadosItem {
     				 boolean itemEncalhado){
         this.codigo = codigo;
         this.descricao = descricao;
+        this.custoReposicao =
+                custoReposicao;
+
+        this.processoReposicao =
+                processoReposicao;
         this.custoAtual = custoAtual;
         this.custoPromob = custoPromob;
         this.custoAnterior = custoAnterior;
@@ -63,6 +77,14 @@ public class DadosItem {
         this.custoVerdadeiro = custoVerdadeiro;
         this.registroCustoVerdadeiro = registroCustoVerdadeiro;
         this.dataCustoVerdadeiro = dataCustoVerdadeiro;
+    }
+    
+    public BigDecimal getCustoReposicao() {
+        return custoReposicao;
+    }
+
+    public String getProcessoReposicao() {
+        return processoReposicao;
     }
     
     public BigDecimal getCustoVerdadeiro() {

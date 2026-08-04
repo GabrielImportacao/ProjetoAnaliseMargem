@@ -18,6 +18,46 @@ public class TesteCustoRepository {
         System.out.println();
         testarHistoricoCustos(repository, codigoTeste);
     }
+    
+    private static void testarFatorCustoFechado(
+            CustoRepository repository,
+            String codigoItem
+    ) {
+        System.out.println(
+                "Buscando fator do custo fechado "
+                        + "mais recente: "
+                        + codigoItem
+        );
+
+        Optional<CustoItem> encontrado =
+                repository
+                        .buscarCustoFechadoMaisRecenteComFatorPorItem(
+                                codigoItem
+                        );
+
+        if (encontrado.isEmpty()) {
+            System.out.println(
+                    "Nenhum fator encontrado."
+            );
+
+            return;
+        }
+
+        CustoItem custoItem =
+                encontrado.get();
+
+        System.out.println(
+                "Processo do fator: "
+                        + custoItem
+                                .getRegistroImportacao()
+        );
+
+        System.out.println(
+                "Fator Líquido BRL: "
+                        + custoItem
+                                .getFatorLiquidoBrl()
+        );
+    }
 
     private static void testarCustoMaisRecente(CustoRepository repository, String codigoItem) {
         System.out.println("Buscando custo mais recente do item: " + codigoItem);

@@ -1,6 +1,6 @@
 ===== DIAGNOSTICO DE AMBIENTE =====
-Data/Hora: 2026-07-01T15:48:31.516854400
-user.dir: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem\release-portatil\ProgramaMargem
+Data/Hora: 2026-07-31T11:18:39.002760200
+user.dir: C:\Users\import3\Desktop\Git\ProjetoAnaliseMargem
 user.home: C:\Users\import3
 java.version: 25.0.2
 os.name: Windows 11
